@@ -144,6 +144,9 @@ func _run_selected_action():
 func _run_current_test():
 	_save_test()
 	
+	OS.set_environment("DoAutoTesting", "true")
+	OS.set_environment("AutoTestPath", "res://testing.tres")
+	
 	EditorInterface.play_main_scene()
 
 func _run_all_tests():
