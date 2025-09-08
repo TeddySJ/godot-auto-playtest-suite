@@ -71,14 +71,15 @@ func setup_ui() -> void:
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
 	
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "en till string!"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Hi X Seconds", 2, "jupp"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Quit", 0, "en till string!"))
-	
-	for action in current_test.actions:
-		action_list.add_and_bind_item(action.action_id, action)
+	if current_context != CurrentContext.InEditor:
+		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
+		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
+		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "en till string!"))
+		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Hi X Seconds", 0.5, "jupp"))
+		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Quit", 0, "en till string!"))
+		
+		for action in current_test.actions:
+			action_list.add_and_bind_item(action.action_id, action)
 	
 	action_view = AutoPlaySuiteUiActionView.new()
 	add_child(action_view)
@@ -133,6 +134,13 @@ func _on_action_list_item_selected():
 
 func _save_test():
 	var path : String = "res://testing.tres"
+	
+	current_test.actions.clear()
+	
+	var all_actions : Array = action_list.get_all_items()
+	
+	current_test.actions.append_array(all_actions)
+	
 	current_test.take_over_path(path)
 	ResourceSaver.save(current_test, path)
 

@@ -54,7 +54,7 @@ func get_all_selected() -> Array[TreeItem]:
 	
 	return ret
 
-func _get_all_items() -> Array:
+func get_all_items() -> Array:
 	var arr := root.get_children()
 	var ret : Array = []
 	
