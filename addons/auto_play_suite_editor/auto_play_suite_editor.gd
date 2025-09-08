@@ -15,6 +15,7 @@ var run_all_button : Button
 var save_test_button : Button
 var save_test_as_button : Button
 var load_test_button : Button
+var new_test_button : Button
 
 var item_affected_by_popup : TreeItem
 
@@ -118,6 +119,18 @@ func setup_ui() -> void:
 	load_test_button.text = "Load Test"
 	add_child(load_test_button)
 	load_test_button.pressed.connect(_load_test)
+
+	new_test_button = Button.new()
+	new_test_button.position = load_test_button.position + Vector2(0, 50)
+	new_test_button.text = "New Test"
+	add_child(new_test_button)
+	new_test_button.pressed.connect(_new_test)
+	
+	var debug_fill_button = Button.new()
+	debug_fill_button.position = new_test_button.position + Vector2(-100, 0)
+	debug_fill_button.text = "Debug Fill"
+	add_child(debug_fill_button)
+	debug_fill_button.pressed.connect(_debug_fill)
 	
 	if is_in_editor:
 		_setup_in_editor()
@@ -161,12 +174,30 @@ func _load_test():
 	for action in current_test.actions:
 		action_list.add_and_bind_item(action.action_id, action)
 
+func _new_test():
+	current_test = AutoPlaySuiteTestResource.new()
+	action_list.empty_list()
+
+func _debug_fill():
+	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
+	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
+	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "en till string!"))
+	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Hi X Seconds", 0.5, "jupp"))
+	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Quit", 0, "en till string!"))
+	
+	for action in current_test.actions:
+		action_list.add_and_bind_item(action.action_id, action)	
 
 func _run_selected_action():
 	if action_view.underlying_action != null:
 		AutoPlaySuiteActionLibrary.possible_actions[action_view.underlying_action.action_id].on_enter.call(action_view.underlying_action)
 
 func _run_current_test():
+	if action_list.get_item_count() == 0:
+		return
+	
+	print("Running test with ", action_list.get_item_count(), " actions")
+	
 	_save_test()
 	
 	OS.set_environment("DoAutoTesting", "true")

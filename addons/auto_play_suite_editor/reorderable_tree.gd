@@ -62,7 +62,9 @@ func get_all_items() -> Array:
 		ret.append(backing_dictionary[el])
 	
 	return ret
-	
+
+func get_item_count() -> int:
+	return backing_dictionary.size()
 
 func _get_drag_data(at_position: Vector2):
 	var it := get_item_at_position(at_position)
