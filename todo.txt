@@ -1,19 +1,22 @@
 == TODO RIGHT NOW ==
 
-Launch -> Run Test -> Logging:
+Alter Actions in Action View:
 	
-	I want to learn how to send data back and forth via the debugger channels!
+	Add fields for the different variables in ActionResource (string, float and stringvars-array)
 	
-	* A test must be able to be saved and loaded
-	
-	* Env variables must be set
-	
-	* The running game must be able to run the test:
-		* Therefore, separate the running of said test into its own class: AutoPlaySuiteTestRunner
-		  (this functions like the prototype one in ChooChoo)
-	
-	
+	Make changing these fields reflect properly in the currently loaded test
 
+New Test:
+	
+	Add a "new test" button which clears the test list and view
+	
+Save To Other Files:
+	
+	Save As: Save the current test to a .tres file of the user's choosing
+	
+	Add a variable to the Editor with the path to the currently loaded test, 
+	and if that path is empty it will default to "save as" behavior when clicking "save"
+	and if it is set, it will save to the known path (similar to what it does now)
 
 
 === SPECIFICATION ==
@@ -66,6 +69,15 @@ HOW A TEST FLOWS:
 		the path to the resource file detailing that test is set to another env variable
 	3) The game runs the test, optionally providing logging while doing it
 	4) The game exits, and control is brought back to the plugin, which runs a new test (back to step 1) or cancels the queue
+
+TESTS HANDLING "UNEXPECTED" GAME EVENTS (Game Over, Card Unlocks, etc):
+	
+	The test system must be able to define actions that are taken as a response when being interrupted unexpectedly!
+	
+	The TestRunner should have a function dedicated to "interrupt current flow with new action"
+	
+	Ideally, this should then be "hooked into" by the project using the plugin... like with a deferred call in some helper script
+	that connects a callback with a function that in turn calls the TestRunner
 
 LOGGING:
 	
