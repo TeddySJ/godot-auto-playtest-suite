@@ -4,11 +4,15 @@ class_name AutoPlaySuite
 
 static var Singleton : AutoPlaySuite
 
+var current_file_path : String = ""
+
 var current_test_series : AutoPlaySuiteTestSeriesResource
 var current_test : AutoPlaySuiteTestResource
 
 var action_list : AutoPlaySuiteActionList
 var action_view : AutoPlaySuiteUiActionView
+
+var file_dialog : FileDialog
 
 var run_test_button : Button
 var run_all_button : Button
@@ -35,6 +39,8 @@ enum CurrentContext
 	InPlugin_DontHaveScreen,
 	Running,
 }
+
+signal signal_on_current_test_saved
 
 func _enter_tree() -> void:
 	Singleton = self
@@ -72,16 +78,6 @@ func setup_ui() -> void:
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
 	
-	if false && current_context != CurrentContext.InEditor:
-		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
-		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
-		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "en till string!"))
-		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Hi X Seconds", 0.5, "jupp"))
-		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Quit", 0, "en till string!"))
-		
-		for action in current_test.actions:
-			action_list.add_and_bind_item(action.action_id, action)
-	
 	action_view = AutoPlaySuiteUiActionView.new()
 	add_child(action_view)
 	action_view.position = Vector2(400, 100)
@@ -118,7 +114,7 @@ func setup_ui() -> void:
 	load_test_button.position = save_test_button.position + Vector2(0, 50)
 	load_test_button.text = "Load Test"
 	add_child(load_test_button)
-	load_test_button.pressed.connect(_load_test)
+	load_test_button.pressed.connect(_load_button_pressed)
 
 	new_test_button = Button.new()
 	new_test_button.position = load_test_button.position + Vector2(0, 50)
@@ -149,9 +145,19 @@ func _on_action_list_item_selected():
 func _on_selected_action_id_changed(new_id : String):
 	action_list.update_display_text_of_selected_index()
 
-func _save_test():
-	var path : String = "res://testing.tres"
+func _save_test(path : String = ""):
+	if file_dialog != null:
+		return
+	if action_list.get_item_count() == 0:
+		return
 	
+	if path == "":
+		if current_file_path == "":
+			_save_test_as()
+			return
+		path = current_file_path
+	
+	current_file_path = path
 	current_test.actions.clear()
 	
 	var all_actions : Array = action_list.get_all_items()
@@ -160,12 +166,39 @@ func _save_test():
 	
 	current_test.take_over_path(path)
 	ResourceSaver.save(current_test, path)
+	signal_on_current_test_saved.emit()
 
 func _save_test_as():
-	pass
+	if action_list.get_item_count() == 0:
+		return
 
-func _load_test():
-	var path : String = "res://testing.tres"
+	if file_dialog != null:
+		return
+	
+	var file_dialog = FileDialog.new()
+	add_child(file_dialog)
+	file_dialog.show()
+	file_dialog.add_filter("*.tres")
+	file_dialog.file_selected.connect(_save_file_chosen)
+
+func _save_file_chosen(path : String):
+	file_dialog = null
+	_save_test(path)
+
+func _load_button_pressed():
+	if file_dialog != null:
+		return
+	
+	var file_dialog = FileDialog.new()
+	add_child(file_dialog)
+	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE 
+	file_dialog.add_filter("*.tres")
+	file_dialog.file_selected.connect(_load_test)
+	file_dialog.show()
+
+func _load_test(path : String):
+	file_dialog = null
+	current_file_path = path
 	var test : AutoPlaySuiteTestResource = load(path)
 	
 	current_test = test.duplicate(true)
@@ -175,6 +208,7 @@ func _load_test():
 		action_list.add_and_bind_item(action.action_id, action)
 
 func _new_test():
+	current_file_path = ""
 	current_test = AutoPlaySuiteTestResource.new()
 	action_list.empty_list()
 
@@ -200,8 +234,11 @@ func _run_current_test():
 	
 	_save_test()
 	
+	if current_file_path == "":
+		await signal_on_current_test_saved
+	
 	OS.set_environment("DoAutoTesting", "true")
-	OS.set_environment("AutoTestPath", "res://testing.tres")
+	OS.set_environment("AutoTestPath", current_file_path)
 	
 	EditorInterface.play_main_scene()
 	await _wait_until_game_exits()

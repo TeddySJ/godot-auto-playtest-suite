@@ -10,6 +10,7 @@ func _ready() -> void:
 
 func empty_list():
 	clear()
+	backing_dictionary.clear()
 	root = create_item()
 
 func update_display_text_of_selected_index():
@@ -44,13 +45,13 @@ func _create_right_click_thing():
 
 func _on_action_list_popup_pressed(id):
 	if id == 0: # Add First Item
-		add_and_bind_item("New Entry", 0, 0)
+		add_and_bind_item("New Entry", AutoPlaySuiteActionResource.CreateEmpty(), 0)
 	elif id == 1 || id == 2: # Add above / below
 		if last_selected == null:
 			return
 		
 		var current_pos : int = last_selected.get_index()
-		add_and_bind_item("New Entry", 0, current_pos + (1 if id == 2 else 0))
+		add_and_bind_item("New Entry", AutoPlaySuiteActionResource.CreateEmpty(), current_pos + (1 if id == 2 else 0))
 	elif id == 3: # Delete entry
 		if last_selected == null:
 			return

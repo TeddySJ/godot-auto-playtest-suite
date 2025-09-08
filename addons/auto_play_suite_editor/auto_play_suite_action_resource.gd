@@ -17,3 +17,8 @@ static func Create(action_id : StringName, float_var : float = 0, string_var : S
 	ret.extra_vars = extra_vars
 	
 	return ret
+
+static func CreateEmpty() -> AutoPlaySuiteActionResource:
+	var ret = AutoPlaySuiteActionResource.new()
+	ret.action_id = "[UNSET]"
+	return ret
