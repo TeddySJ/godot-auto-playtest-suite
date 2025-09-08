@@ -74,6 +74,8 @@ func _fill_drop_down(names : Array[StringName]):
 func _action_id_changed(index : int):
 	underlying_action.action_id = drop_down.text
 	signal_on_action_id_changed.emit(drop_down.text)
+	float_var_spinbox.value = 0
+	string_var_line_edit.text = ""
 
 func _string_var_changed(new_text : String):
 	underlying_action.string_var = new_text
