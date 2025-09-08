@@ -87,6 +87,7 @@ func setup_ui() -> void:
 	action_view._add_drop_down_item(&"[UNSET]")
 	action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
 	action_view.run_action_button.pressed.connect(_run_selected_action)
+	action_view.signal_on_action_id_changed.connect(_on_selected_action_id_changed)
 	
 	run_test_button = Button.new()
 	run_test_button.position = Vector2(100, action_list.position.y + action_list.custom_minimum_size.y + 50)
@@ -131,6 +132,9 @@ func _on_action_list_item_selected():
 	var selected = action_list.last_selected
 	var action_resource : AutoPlaySuiteActionResource = action_list.backing_dictionary[selected]
 	action_view._set_action(action_resource)
+
+func _on_selected_action_id_changed(new_id : String):
+	action_list.update_display_text_of_selected_index()
 
 func _save_test():
 	var path : String = "res://testing.tres"

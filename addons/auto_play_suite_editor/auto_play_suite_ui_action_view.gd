@@ -14,6 +14,8 @@ var string_var_line_edit : LineEdit
 
 var underlying_action : AutoPlaySuiteActionResource = null
 
+signal signal_on_action_id_changed(String)
+
 func _ready() -> void:
 	main_panel = Panel.new()
 	main_panel.custom_minimum_size = Vector2(400, 400)
@@ -41,7 +43,7 @@ func _ready() -> void:
 	float_var_spinbox.max_value = 99999999
 	float_var_spinbox.position = float_var_pos + Vector2(100, -4)
 	float_var_spinbox.custom_minimum_size.x = 200
-	float_var_spinbox.value_changed.connect(_string_var_changed)
+	float_var_spinbox.value_changed.connect(_float_var_changed)
 	main_panel.add_child(float_var_spinbox)
 	
 	var string_var_pos := Vector2(30, 140)
@@ -71,6 +73,7 @@ func _fill_drop_down(names : Array[StringName]):
 
 func _action_id_changed(index : int):
 	underlying_action.action_id = drop_down.text
+	signal_on_action_id_changed.emit(drop_down.text)
 
 func _string_var_changed(new_text : String):
 	underlying_action.string_var = new_text

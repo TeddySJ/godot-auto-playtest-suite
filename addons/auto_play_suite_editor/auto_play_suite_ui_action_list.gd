@@ -12,6 +12,11 @@ func empty_list():
 	clear()
 	root = create_item()
 
+func update_display_text_of_selected_index():
+	last_selected.set_text(0, backing_dictionary[last_selected].action_id)
+
+func _update_display_text_at_index(index : int):
+	pass
 
 func _create_right_click_thing():
 	var popup : PopupMenu = PopupMenu.new()
