@@ -21,6 +21,7 @@ func _ready() -> void:
 	drop_down = OptionButton.new()
 	drop_down.position = Vector2(30, 30)
 	drop_down.custom_minimum_size.x = 300
+	drop_down.item_selected.connect(_action_id_changed)
 	main_panel.add_child(drop_down)
 	
 	run_action_button = Button.new()
@@ -40,6 +41,7 @@ func _ready() -> void:
 	float_var_spinbox.max_value = 99999999
 	float_var_spinbox.position = float_var_pos + Vector2(100, -4)
 	float_var_spinbox.custom_minimum_size.x = 200
+	float_var_spinbox.value_changed.connect(_string_var_changed)
 	main_panel.add_child(float_var_spinbox)
 	
 	var string_var_pos := Vector2(30, 140)
@@ -52,8 +54,11 @@ func _ready() -> void:
 	string_var_line_edit = LineEdit.new()
 	string_var_line_edit.position = string_var_pos + Vector2(100, -4)
 	string_var_line_edit.custom_minimum_size.x = 200
+	string_var_line_edit.text_changed.connect(_string_var_changed)
 	main_panel.add_child(string_var_line_edit)
 	
+	if underlying_action == null:
+		visible = false
 
 func _add_drop_down_item(_name : StringName):
 	drop_down.add_item(_name)
@@ -64,7 +69,22 @@ func _fill_drop_down(names : Array[StringName]):
 	for _name in names:
 		_add_drop_down_item(_name)
 
+func _action_id_changed(index : int):
+	underlying_action.action_id = drop_down.text
+
+func _string_var_changed(new_text : String):
+	underlying_action.string_var = new_text
+
+func _float_var_changed(new_value : float):
+	underlying_action.float_var = new_value
+
 func _set_action(action_to_set : AutoPlaySuiteActionResource):
+	visible = true
 	underlying_action = action_to_set
-	var drop_down_id : int = backing_dictionary[action_to_set.action_id]
+	_update_text_fields()
+
+func _update_text_fields():
+	var drop_down_id : int = backing_dictionary[underlying_action.action_id]
 	drop_down.select(drop_down.get_item_index(drop_down_id))
+	string_var_line_edit.text = underlying_action.string_var
+	float_var_spinbox.value = underlying_action.float_var
