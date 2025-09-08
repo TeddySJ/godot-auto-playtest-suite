@@ -5,7 +5,7 @@ var on_enter : Callable
 var on_process : Callable
 var description : String
 
-static func EmptyProcess(delta : float):
+static func EmptyProcess(delta : float, action_resource : AutoPlaySuiteActionResource):
 	pass
 
 static func Create(on_enter : Callable, description : String = "", on_process : Callable = EmptyProcess):
