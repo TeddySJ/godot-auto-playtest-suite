@@ -8,6 +8,10 @@ func _ready() -> void:
 	drop_mode_flags = DropModeFlags.DROP_MODE_INBETWEEN
 	select_mode = Tree.SELECT_MULTI
 
+func empty_list():
+	clear()
+	root = create_item()
+
 
 func _create_right_click_thing():
 	var popup : PopupMenu = PopupMenu.new()
