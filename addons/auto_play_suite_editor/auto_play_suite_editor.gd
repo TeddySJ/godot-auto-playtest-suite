@@ -148,9 +148,20 @@ func _run_current_test():
 	OS.set_environment("AutoTestPath", "res://testing.tres")
 	
 	EditorInterface.play_main_scene()
+	await _wait_until_game_exits()
+	
+	OS.set_environment("DoAutoTesting", "")
+	OS.set_environment("AutoTestPath", "")
+	
 
 func _run_all_tests():
 	pass
+
+func _wait_until_game_exits() -> void:
+	# Give the editor one frame to flip into "playing" state.
+	await get_tree().process_frame
+	while EditorInterface.is_playing_scene():
+		await get_tree().process_frame
 
 func init_plugin():
 	var custom_instructions = load("res://addons/auto_play_suite_editor/custom_instructions/custom_auto_play_instructions.gd").new()
