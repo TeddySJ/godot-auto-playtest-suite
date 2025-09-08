@@ -1,0 +1,56 @@
+
+
+MAIN ENGINE:
+	
+	AutoPlaySuiteEditor:
+		
+		This does the coordination between all parts, as well as set up the different parts' interfaces.
+		
+		It is the only thing which knows not only about the current tests, but other available tests.
+		
+		Capability Specification:
+			
+			RUN SINGLE: 
+				It must be able to launch an instance of the game and then run a FULL TEST
+			
+			RUN SERIES: 
+				It must be able to be primed with a series of independent tests, which will launch its own instance of the game
+			
+			CANCEL SERIES:
+				It must be possible to cancel the current series if the user realises it no longer serves to run them all
+			
+			BASIC/ADVANCED LOGGING: 
+				It must be able to log a test, and if running a series, log all of them separately in an orderly fashion
+				It must be able to communicate with the running debug session, and be fed back live data as the game progress
+				There must be an option to save a log as a file
+		
+		UI Requirements / Levels:
+			
+			Top Level:
+				
+				Can hold MULTIPLE FULL TESTS at once in a SERIES, so the absolute TOP LEVEL must be able to show a list of these!
+				
+			Full Test:
+				
+				The view which encompasses both the action list, and the definitions of said action
+				
+			Saving/Loading:
+				
+				Must be able to save and load individual tests, as well as saving and loading whole test series
+			
+		
+
+HOW A TEST FLOWS:
+	
+	1) A test is loaded into the AutoPlaySuiteEditor
+	2) When the test is set to run: 
+		an env variable is set to indicate that a test is supposed to be loaded
+		the path to the resource file detailing that test is set to another env variable
+	3) The game runs the test, optionally providing logging while doing it
+	4) The game exits, and control is brought back to the plugin, which runs a new test (back to step 1) or cancels the queue
+
+LOGGING:
+	
+	AutoPlaySuiteLogger:
+		
+		A class that handles both the Editor and Game side of logging! 

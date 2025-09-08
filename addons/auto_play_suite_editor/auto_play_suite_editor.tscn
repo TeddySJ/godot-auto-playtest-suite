@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://lx842bd0w5l4"]
+
+[ext_resource type="Script" uid="uid://cbupp35c4wa8n" path="res://addons/auto_play_suite_editor/auto_play_suite_editor.gd" id="1_ujlv1"]
+
+[node name="DialogueEditor" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("1_ujlv1")

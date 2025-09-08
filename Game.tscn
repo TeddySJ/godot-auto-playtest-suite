@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://bx5eu364ixi3y"]
+
+[node name="Game" type="Node2D"]
+
+[node name="Label" type="Label" parent="."]
+offset_left = 141.0
+offset_top = 101.0
+offset_right = 253.0
+offset_bottom = 163.0
+text = "Hallå!"
