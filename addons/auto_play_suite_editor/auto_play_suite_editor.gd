@@ -1,6 +1,8 @@
 @tool
 extends Control
-class_name AutoTestingSuite
+class_name AutoPlaySuite
+
+static var Singleton : AutoPlaySuite
 
 var current_test_series : AutoPlaySuiteTestSeriesResource
 var current_test : AutoPlaySuiteTestResource
@@ -13,8 +15,6 @@ var run_all_button : Button
 var save_test_button : Button
 var save_test_as_button : Button
 var load_test_button : Button
-
-var possible_actions : Dictionary[StringName, InstructionDefinition]
 
 var item_affected_by_popup : TreeItem
 
@@ -34,6 +34,9 @@ enum CurrentContext
 	InPlugin_DontHaveScreen,
 	Running,
 }
+
+func _enter_tree() -> void:
+	Singleton = self
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -71,6 +74,7 @@ func setup_ui() -> void:
 	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
 	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
 	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "en till string!"))
+	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Quit", 0, "en till string!"))
 	
 	for action in current_test.actions:
 		action_list.add_and_bind_item(action.action_id, action)
@@ -79,7 +83,7 @@ func setup_ui() -> void:
 	add_child(action_view)
 	action_view.position = Vector2(400, 100)
 	action_view._add_drop_down_item(&"[UNSET]")
-	action_view._fill_drop_down(possible_actions.keys())
+	action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
 	action_view.run_action_button.pressed.connect(_run_selected_action)
 	
 	run_test_button = Button.new()
@@ -139,7 +143,7 @@ func _load_test():
 
 func _run_selected_action():
 	if action_view.underlying_action != null:
-		possible_actions[action_view.underlying_action.action_id].method.call(action_view.underlying_action)
+		AutoPlaySuiteActionLibrary.possible_actions[action_view.underlying_action.action_id].on_enter.call(action_view.underlying_action)
 
 func _run_current_test():
 	_save_test()
@@ -152,7 +156,6 @@ func _run_current_test():
 	
 	OS.set_environment("DoAutoTesting", "")
 	OS.set_environment("AutoTestPath", "")
-	
 
 func _run_all_tests():
 	pass
@@ -165,7 +168,7 @@ func _wait_until_game_exits() -> void:
 
 func init_plugin():
 	var custom_instructions = load("res://addons/auto_play_suite_editor/custom_instructions/custom_auto_play_instructions.gd").new()
-	custom_instructions.hook_into_suite(self)
+	custom_instructions.hook_into_suite()
 	current_test_series = AutoPlaySuiteTestSeriesResource.new()
 	current_test = AutoPlaySuiteTestResource.new()
 

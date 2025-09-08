@@ -1,13 +1,13 @@
 @tool
 extends EditorPlugin
 
-var editor_instance : AutoTestingSuite
+var editor_instance : AutoPlaySuite
 
 func _enter_tree() -> void:
 	editor_instance = preload("res://addons/auto_play_suite_editor/auto_play_suite_editor.tscn").instantiate()
 	get_editor_interface().get_editor_main_screen().add_child(editor_instance)
 	
-	editor_instance.current_context = AutoTestingSuite.CurrentContext.InPlugin_DontHaveScreen
+	editor_instance.current_context = AutoPlaySuite.CurrentContext.InPlugin_DontHaveScreen
 	editor_instance.init_plugin()
 	main_screen_changed.connect(editor_instance._on_editor_main_screen_changed)
 	_make_visible(false)
