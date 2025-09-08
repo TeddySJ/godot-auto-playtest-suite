@@ -71,7 +71,7 @@ func setup_ui() -> void:
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
 	
-	if current_context != CurrentContext.InEditor:
+	if false && current_context != CurrentContext.InEditor:
 		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
 		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
 		current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "en till string!"))
@@ -148,7 +148,15 @@ func _save_test_as():
 	pass
 
 func _load_test():
-	pass
+	var path : String = "res://testing.tres"
+	var test : AutoPlaySuiteTestResource = load(path)
+	
+	current_test = test.duplicate(true)
+	
+	action_list.empty_list()
+	for action in current_test.actions:
+		action_list.add_and_bind_item(action.action_id, action)
+
 
 func _run_selected_action():
 	if action_view.underlying_action != null:
