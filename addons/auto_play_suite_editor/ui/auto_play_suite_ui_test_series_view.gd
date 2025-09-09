@@ -18,6 +18,7 @@ var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 var current_test_series : AutoPlaySuiteTestSeriesResource
 
 signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
+signal signal_on_new_series
 
 func _ready() -> void:
 	if current_test_series == null:
@@ -59,6 +60,7 @@ func _ready() -> void:
 	new_series_button = Button.new()
 	new_series_button.text = "New Series"
 	new_series_button.position = button_start_pos + Vector2(10, 0) * ed_scale
+	new_series_button.pressed.connect(_new_series_button_pressed)
 	add_child(new_series_button)
 	
 	load_series_button = Button.new()
@@ -75,6 +77,11 @@ func _ready() -> void:
 	remove_test_button.text = "Remove Test"
 	remove_test_button.position = button_start_pos + Vector2(340, 0) * ed_scale
 	add_child(remove_test_button)
+
+func _new_series_button_pressed():
+	clear()
+	_randomize_test_series_name()
+	signal_on_new_series.emit()
 
 func _test_series_name_changed(new_text : String):
 	current_test_series.test_series_name = new_text

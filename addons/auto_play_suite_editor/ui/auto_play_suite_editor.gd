@@ -96,6 +96,7 @@ func setup_ui() -> void:
 	test_series_view.custom_minimum_size.x = 700 * ed_scale
 	test_series_view.custom_minimum_size.y = 80 * ed_scale
 	test_series_view.signal_on_test_changed.connect(_changed_active_test_of_series)
+	test_series_view.signal_on_new_series.connect(_on_new_test_series)
 	add_child(test_series_view)
 	
 	test_series_view.position = Vector2(100,10) * ed_scale
@@ -295,6 +296,9 @@ func _new_test():
 	current_test.test_name = test_name
 	action_list.empty_list()
 	test_series_view.add_button(current_test)
+
+func _on_new_test_series():
+	_new_test()
 
 func _sync_current_test_to_list():
 	if currently_setting_new_test:
