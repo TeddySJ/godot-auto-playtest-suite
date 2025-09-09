@@ -11,6 +11,7 @@ var current_test : AutoPlaySuiteTestResource
 
 var action_list : AutoPlaySuiteActionList
 var action_view : AutoPlaySuiteUiActionView
+var logs : AutoPlaySuiteLogStore
 
 var file_dialog : FileDialog
 
@@ -22,6 +23,7 @@ var load_test_button : Button
 var new_test_button : Button
 
 var item_affected_by_popup : TreeItem
+
 
 var current_context : CurrentContext = CurrentContext.Running
 var is_in_editor : bool:
@@ -129,6 +131,9 @@ func setup_ui() -> void:
 	add_child(debug_fill_button)
 	debug_fill_button.pressed.connect(_debug_fill)
 	
+	logs = AutoPlaySuiteLogStore.get_shared()
+	#add_child(logs)
+	
 	if is_in_editor:
 		_setup_in_editor()
 
@@ -138,9 +143,8 @@ func _setup_in_single_scene():
 func _setup_in_editor():
 	pass
 
-func _logger_message_received(data):
-	print("Received message from debugger!")
-	#print(data)
+func _logger_message_received(data: Array):
+	logs.handle_debugger_message(data)
 
 func _on_action_list_item_selected():
 	var selected = action_list.last_selected
@@ -245,8 +249,12 @@ func _run_current_test():
 	OS.set_environment("DoAutoTesting", "true")
 	OS.set_environment("AutoTestPath", current_file_path)
 	
+	logs.clear_logs()
+
 	EditorInterface.play_main_scene()
 	await _wait_until_game_exits()
+	
+	logs.print_all_logs()
 	
 	OS.set_environment("DoAutoTesting", "")
 	OS.set_environment("AutoTestPath", "")
