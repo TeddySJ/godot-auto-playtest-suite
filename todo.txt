@@ -2,17 +2,14 @@
 
 LOGGING:
 	
-	Add a dictionary that ties a StringName to a static function which returns a AutoPlaySuiteLogger
+	Make the Logger be able to dump out its log as JSON via the debugger channel
 	
-	Createa a function capable of creating a custom logger class
+	Make the Editor Plugin be able to receive said JSON
 	
-	Implement the base logger class
+	Let the Editor Plugin have a "latest logs" nested dictionary, like so: Dictionary[TestName,Dictionary[LoggerName, Log]]
 	
-	Implement a custom logger class that "does something" and actually fills a log
-	
-	Create an "Attach Logger" action type to the custom instructions, which takes a LoggerID as string var
-		This instruction creates the specified Logger and attaches it to Root
-	
+	Populate those dictionaries through the received messages via the debugger channel
+		It must be done as a stream, since the application might exit suddenly and might then fail to send logs
 
 === SPECIFICATION ==
 
@@ -84,7 +81,7 @@ LOGGING:
 		
 		There is a "virtual" class called LoggerDefinition which can be extended by the user
 		
-		Base methods: init(), _process(delta), _on_auto_play_action(resource), log(string), log_to_list(key, data, also_to_output : bool)
+		Base methods: setup(), _process(delta), _on_auto_play_action(resource), log(string), log_to_list(key, data, also_to_output : bool)
 		
 		The supposed use case is to connect to various signals in init() and then use connected functions to log
 		
