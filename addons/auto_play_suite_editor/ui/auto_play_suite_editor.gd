@@ -2,7 +2,9 @@
 extends Control
 class_name AutoPlaySuite
 
-static var Singleton : AutoPlaySuite
+static var Singleton : AutoPlaySuite:
+	get:
+		return _get_plugin_singleton()
 
 var current_file_path : String = ""
 
@@ -50,7 +52,15 @@ enum CurrentContext
 signal signal_on_current_test_saved
 
 func _enter_tree() -> void:
-	Singleton = self
+	pass
+
+func _register_plugin_singleton():
+	var root := EditorInterface.get_base_control()
+	root.set_meta("APS_EDITOR", self)
+
+static func _get_plugin_singleton() -> AutoPlaySuite:
+	var root := EditorInterface.get_base_control()
+	return root.get_meta("APS_EDITOR")
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -265,6 +275,8 @@ func _load_test(path : String):
 	var test : AutoPlaySuiteTestResource = load(path)
 	
 	current_test = test.duplicate(true)
+	
+	test_name_field.text = current_test.test_name
 	
 	action_list.empty_list()
 	for action in current_test.actions:
