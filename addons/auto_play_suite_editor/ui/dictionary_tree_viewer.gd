@@ -1,5 +1,4 @@
-@tool
-extends Control
+extends PanelContainer
 class_name DictTreeViewer
 
 ## ————— Config —————
@@ -13,6 +12,9 @@ class_name DictTreeViewer
 var _tree: Tree
 
 func _ready() -> void:
+	pass
+
+func create_tree():
 	_build_tree_node()
 	_rebuild()
 
@@ -24,11 +26,17 @@ func _build_tree_node() -> void:
 	_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_tree.anchors_preset = Control.PRESET_FULL_RECT
-	_tree.set_column_titles_visible(true)
-	_tree.set_column_title(0, "Key")
-	_tree.set_column_title(1, "Value")
+	#_tree.set_column_titles_visible(true)
+	#_tree.set_column_title(0, "Key")
+	#_tree.set_column_title(1, "Value")
 	_tree.set_column_expand_ratio(0, 0.5)
 	_tree.set_column_expand_ratio(1, 0.5)
+	
+	print(custom_minimum_size.x)
+	
+	_tree.set_column_custom_minimum_width(0, custom_minimum_size.x * 0.25)
+	_tree.set_column_custom_minimum_width(1, custom_minimum_size.x * 0.75)
+	#_tree.custom_minimum_size = Vector2(1000, 1000)
 	add_child(_tree)
 
 func set_data(d: Dictionary) -> void:
@@ -76,7 +84,8 @@ func _rebuild() -> void:
 
 func _add_entry(parent: TreeItem, label: String, v) -> void:
 	if v is Dictionary:
-		var ti := _branch_item(parent, label, "Object{" + str((v as Dictionary).size()) + "}")
+		#var ti := _branch_item(parent, label, "Object{" + str((v as Dictionary).size()) + "}")
+		var ti := _branch_item(parent, label, "")
 		var keys := (v as Dictionary).keys()
 		if sort_keys:
 			keys.sort_custom(func(a, b): return str(a) < str(b))
@@ -85,7 +94,8 @@ func _add_entry(parent: TreeItem, label: String, v) -> void:
 
 	elif v is Array:
 		var arr := v as Array
-		var ti := _branch_item(parent, label, "Array[" + str(arr.size()) + "]")
+		#var ti := _branch_item(parent, label, "Array[" + str(arr.size()) + "]")
+		var ti := _branch_item(parent, label, "Array")
 		for i in arr.size():
 			_add_entry(ti, "[" + str(i) + "]", arr[i])
 
@@ -99,14 +109,15 @@ func _add_entry(parent: TreeItem, label: String, v) -> void:
 		var ti := _tree.create_item(parent)
 		ti.set_text(0, label)
 		ti.set_text(1, _value_to_string(v))
-		ti.selectable = true
+		ti.set_selectable(0, true)
+
 
 func _branch_item(parent: TreeItem, label: String, summary: String) -> TreeItem:
 	var ti := _tree.create_item(parent)
 	ti.set_text(0, label)
 	ti.set_text(1, summary)
 	ti.collapsed = containers_collapsed_by_default
-	ti.selectable = true
+	ti.set_selectable(0, true)
 	return ti
 
 ## ————— Helpers —————

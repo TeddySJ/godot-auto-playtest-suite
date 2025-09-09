@@ -17,7 +17,9 @@ var underlying_action : AutoPlaySuiteActionResource = null
 signal signal_on_action_id_changed(String)
 
 func _ready() -> void:
-	var ed_scale := EditorInterface.get_editor_scale()
+	var ed_scale : float = 1
+	if Engine.is_editor_hint():
+		ed_scale = EditorInterface.get_editor_scale()
 
 	main_panel = Panel.new()
 	main_panel.custom_minimum_size = Vector2(400, 400) * ed_scale
@@ -60,9 +62,6 @@ func _ready() -> void:
 	string_var_line_edit.custom_minimum_size.x = 200 * ed_scale
 	string_var_line_edit.text_changed.connect(_string_var_changed)
 	main_panel.add_child(string_var_line_edit)
-	
-	if underlying_action == null:
-		visible = false
 
 func _add_drop_down_item(_name : StringName):
 	drop_down.add_item(_name)
@@ -86,7 +85,6 @@ func _float_var_changed(new_value : float):
 	underlying_action.float_var = new_value
 
 func _set_action(action_to_set : AutoPlaySuiteActionResource):
-	visible = true
 	underlying_action = action_to_set
 	_update_text_fields()
 

@@ -11,6 +11,8 @@ var current_test : AutoPlaySuiteTestResource
 
 var action_list : AutoPlaySuiteActionList
 var action_view : AutoPlaySuiteUiActionView
+var logs_view : AutoPlaySuiteUiLogViewer
+
 var logs : AutoPlaySuiteLogStore
 
 var file_dialog : FileDialog
@@ -21,6 +23,7 @@ var save_test_button : Button
 var save_test_as_button : Button
 var load_test_button : Button
 var new_test_button : Button
+var show_logs_button : Button
 
 var item_affected_by_popup : TreeItem
 
@@ -71,7 +74,9 @@ func setup_ui() -> void:
 	if current_context == CurrentContext.Running:
 		_setup_in_single_scene()
 	
-	var ed_scale := EditorInterface.get_editor_scale()
+	var ed_scale : float = 1
+	if Engine.is_editor_hint():
+		ed_scale = EditorInterface.get_editor_scale()
 	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
@@ -82,9 +87,11 @@ func setup_ui() -> void:
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
 	
+	var right_side_view_position := Vector2(400, 100) * ed_scale
+	
 	action_view = AutoPlaySuiteUiActionView.new()
 	add_child(action_view)
-	action_view.position = Vector2(400, 100) * ed_scale
+	action_view.position = right_side_view_position
 	action_view._add_drop_down_item(&"[UNSET]")
 	if current_context != CurrentContext.InEditor:
 		action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
@@ -127,14 +134,29 @@ func setup_ui() -> void:
 	add_child(new_test_button)
 	new_test_button.pressed.connect(_new_test)
 	
+	show_logs_button = Button.new()
+	show_logs_button.position = load_test_button.position + Vector2(100, 50) * ed_scale
+	show_logs_button.text = "Show Logs"
+	add_child(show_logs_button)
+	show_logs_button.pressed.connect(_show_logger)
+	
 	var debug_fill_button = Button.new()
 	debug_fill_button.position = new_test_button.position + Vector2(-100, 0) * ed_scale
 	debug_fill_button.text = "Debug Fill"
 	add_child(debug_fill_button)
 	debug_fill_button.pressed.connect(_debug_fill)
 	
+	logs_view = AutoPlaySuiteUiLogViewer.new()
+	add_child(logs_view)
+	logs_view.position = right_side_view_position
+	logs_view.custom_minimum_size = Vector2(600, 300) * ed_scale
+	logs_view.dict_view.custom_minimum_size = Vector2(600, 300) * ed_scale
+	logs_view.dict_view.create_tree()
+	
 	logs = AutoPlaySuiteLogStore.get_shared()
 	#add_child(logs)
+	
+	_hide_all_right_side_elements()
 	
 	if is_in_editor:
 		_setup_in_editor()
@@ -148,10 +170,23 @@ func _setup_in_editor():
 func _logger_message_received(data: Array):
 	logs.handle_debugger_message(data)
 
+func _show_action_view():
+	_hide_all_right_side_elements()
+	action_view.visible = true
+
+func _show_logger():
+	_hide_all_right_side_elements()
+	logs_view.visible = true
+
+func _hide_all_right_side_elements():
+	action_view.visible = false
+	logs_view.visible = false
+
 func _on_action_list_item_selected():
 	var selected = action_list.last_selected
 	var action_resource : AutoPlaySuiteActionResource = action_list.backing_dictionary[selected]
 	action_view._set_action(action_resource)
+	_show_action_view()
 
 func _on_selected_action_id_changed(new_id : String):
 	action_list.update_display_text_of_selected_index()
@@ -257,6 +292,9 @@ func _run_current_test():
 	await _wait_until_game_exits()
 	
 	logs.print_all_logs()
+	
+	logs_view.set_data(logs.log_dictionary)
+	_show_logger()
 	
 	OS.set_environment("DoAutoTesting", "")
 	OS.set_environment("AutoTestPath", "")

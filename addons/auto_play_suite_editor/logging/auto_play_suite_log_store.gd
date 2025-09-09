@@ -4,6 +4,9 @@ class_name AutoPlaySuiteLogStore
 var log_dictionary := {}  # Dictionary[String, Dictionary]
 
 static func get_shared() -> AutoPlaySuiteLogStore:
+	if !Engine.is_editor_hint():
+		return AutoPlaySuiteLogStore.new()
+	
 	var root := EditorInterface.get_base_control()
 	if root.has_meta("APS_LOG_STORE"):
 		return root.get_meta("APS_LOG_STORE")
