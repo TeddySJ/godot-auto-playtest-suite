@@ -316,8 +316,9 @@ func _set_current_test(new_test : AutoPlaySuiteTestResource):
 		action_list.add_and_bind_item(action.action_id, action)	
 	currently_setting_new_test = false
 
-func _test_name_field_changed(new_test : String):
-	current_test.test_name = test_name_field.text
+func _test_name_field_changed(new_name : String):
+	current_test.test_name = new_name
+	test_series_view.current_test_name_changed(new_name)
 
 func _debug_fill():
 	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))

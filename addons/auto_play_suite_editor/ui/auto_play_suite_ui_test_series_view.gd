@@ -56,6 +56,11 @@ func _randomize_test_series_name():
 	test_series_name_input.text = rand_name
 	current_test_series.test_series_name = rand_name
 
+func current_test_name_changed(new_name : String):
+	for button in test_button_list:
+		if button.disabled:
+			button.text = new_name
+
 func add_button(test_resource : AutoPlaySuiteTestResource):
 	var button := Button.new()
 	button.text = test_resource.test_name
