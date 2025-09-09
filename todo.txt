@@ -1,23 +1,18 @@
 == TODO RIGHT NOW ==
 
-Alter Actions in Action View:
+LOGGING:
 	
-	Add fields for the different variables in ActionResource (string, float and stringvars-array)
+	Add a dictionary that ties a StringName to a static function which returns a AutoPlaySuiteLogger
 	
-	Make changing these fields reflect properly in the currently loaded test
-
-New Test:
+	Createa a function capable of creating a custom logger class
 	
-	Add a "new test" button which clears the test list and view
+	Implement the base logger class
 	
-Save To Other Files:
+	Implement a custom logger class that "does something" and actually fills a log
 	
-	Save As: Save the current test to a .tres file of the user's choosing
+	Create an "Attach Logger" action type to the custom instructions, which takes a LoggerID as string var
+		This instruction creates the specified Logger and attaches it to Root
 	
-	Add a variable to the Editor with the path to the currently loaded test, 
-	and if that path is empty it will default to "save as" behavior when clicking "save"
-	and if it is set, it will save to the known path (similar to what it does now)
-
 
 === SPECIFICATION ==
 
@@ -83,4 +78,14 @@ LOGGING:
 	
 	AutoPlaySuiteLogger:
 		
-		A class that handles both the Editor and Game side of logging! 
+		A class that handles both the Editor and Game side of logging!
+	
+	How Logging is implemented:
+		
+		There is a "virtual" class called LoggerDefinition which can be extended by the user
+		
+		Base methods: init(), _process(delta), _on_auto_play_action(resource), log(string), log_to_list(key, data, also_to_output : bool)
+		
+		The supposed use case is to connect to various signals in init() and then use connected functions to log
+		
+		It's also possible to send a message to a debugger via an autoplay instruction, to tell it to output certain log info at specific points in a test, for example
