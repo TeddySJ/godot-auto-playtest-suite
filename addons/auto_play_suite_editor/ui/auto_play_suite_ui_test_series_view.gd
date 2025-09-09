@@ -1,6 +1,9 @@
 extends Control
 class_name AutoPlaySuiteUiTestSeriesView
 
+var file_dialog : FileDialog
+var current_file_path : String
+
 var test_series_name_input : LineEdit
 
 var base_panel_container : PanelContainer
@@ -15,8 +18,10 @@ var remove_test_button : Button
 
 var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 
+var current_selected_index : int = -1
 var current_test_series : AutoPlaySuiteTestSeriesResource
 
+signal signal_on_current_test_series_saved
 signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
 signal signal_on_new_series
 
@@ -66,22 +71,128 @@ func _ready() -> void:
 	load_series_button = Button.new()
 	load_series_button.text = "Load Series"
 	load_series_button.position = button_start_pos + Vector2(120, 0) * ed_scale
+	load_series_button.pressed.connect(_load_series_button_pressed)
 	add_child(load_series_button)
 
 	save_series_button = Button.new()
 	save_series_button.text = "Save Series"
 	save_series_button.position = button_start_pos + Vector2(230, 0) * ed_scale
+	save_series_button.pressed.connect(_save_test_series)
 	add_child(save_series_button)
+
+	save_series_as_button = Button.new()
+	save_series_as_button.text = "Save Series As"
+	save_series_as_button.position = button_start_pos + Vector2(340, 0) * ed_scale
+	save_series_as_button.pressed.connect(_save_test_series_as)
+	add_child(save_series_as_button)
 	
 	remove_test_button = Button.new()
 	remove_test_button.text = "Remove Test"
-	remove_test_button.position = button_start_pos + Vector2(340, 0) * ed_scale
+	remove_test_button.position = button_start_pos + Vector2(470, 0) * ed_scale
 	add_child(remove_test_button)
 
 func _new_series_button_pressed():
 	clear()
 	_randomize_test_series_name()
+	current_selected_index = -1
+	current_test_series = AutoPlaySuiteTestSeriesResource.new()
 	signal_on_new_series.emit()
+
+func _can_save_series(output_error_reason : bool = true) -> bool:
+	var err: String = ""
+	var ret: bool = true
+	
+	if test_button_list.size() == 0:
+		ret = false
+		err = "Can't save an empty series!"
+	
+	for s in current_test_series.paths_to_tests:
+		if s == "":
+			ret = false
+			err = "All tests must be saved to disk before the series can be saved!"
+			break
+	
+	
+	if output_error_reason && !ret:
+		printerr(err)
+	
+	return ret
+
+func _save_test_series(path : String = ""):
+	if file_dialog != null:
+		return
+	
+	if !_can_save_series():
+		return
+	
+	if path == "":
+		if current_file_path == "":
+			_save_test_series_as()
+			return
+		path = current_file_path
+	
+	current_file_path = path
+	
+	print(current_test_series.paths_to_tests.size())
+	
+	current_test_series.take_over_path(path)
+	ResourceSaver.save(current_test_series, path)
+	signal_on_current_test_series_saved.emit()
+
+func _save_test_series_as():
+	if file_dialog != null:
+		return
+	if !_can_save_series():
+		return
+	
+	var file_dialog = FileDialog.new()
+	add_child(file_dialog)
+	file_dialog.show()
+	file_dialog.add_filter("*.testseries.tres", "Test Series Resource")
+	file_dialog.file_selected.connect(_save_file_chosen)
+
+func _save_file_chosen(path : String):
+	file_dialog = null
+	_save_test_series(path)
+
+func _load_series_button_pressed():
+	if file_dialog != null:
+		return
+	
+	var file_dialog = FileDialog.new()
+	add_child(file_dialog)
+	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE 
+	file_dialog.add_filter("*.testseries.tres", "Test Series Resource")
+	file_dialog.file_selected.connect(_load_series)
+	file_dialog.show()
+
+func _load_series(path : String):
+	file_dialog = null
+	var series : AutoPlaySuiteTestSeriesResource = load(path)
+	
+	if series == null:
+		printerr("The loaded file is not a Test Series Resource")
+		return
+
+	current_file_path = path
+	_set_current_series(series.duplicate(true))
+
+func _set_current_series(new_series : AutoPlaySuiteTestSeriesResource):
+	clear()
+	current_test_series = new_series
+	test_series_name_input.text = current_test_series.test_series_name
+	print(current_test_series.paths_to_tests.size())
+	for path in current_test_series.paths_to_tests:
+		var res : AutoPlaySuiteTestResource = load(path)
+		if res == null:
+			printerr("Loaded Test in Test Series was not a test?!")
+		else:
+			add_test(res, false)
+	
+	if test_button_list.size() == 0:
+		return
+	
+	_test_button_pressed(test_button_list[0])
 
 func _test_series_name_changed(new_text : String):
 	current_test_series.test_series_name = new_text
@@ -98,22 +209,30 @@ func current_test_name_changed(new_name : String):
 		if button.disabled:
 			button.text = new_name
 
-func add_button(test_resource : AutoPlaySuiteTestResource):
+func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = true):
 	var button := Button.new()
 	button.text = test_resource.test_name
 	test_button_list.append(button)
-	if test_button_list.size() == 1:
-		button.disabled = true
+	
 	underlying_dictionary[button] = test_resource
 	button.pressed.connect(func():_test_button_pressed(button))
 	button.focus_mode = Control.FOCUS_NONE
 	hbox_container.add_child(button)
+	
+	if add_to_series:
+		current_test_series.paths_to_tests.append("")
+		_test_button_pressed(button)
 
 func _test_button_pressed(button_pressed : Button):
 	for button in test_button_list:
 		button.disabled = false
+	current_selected_index = test_button_list.find(button_pressed)
 	button_pressed.disabled = true
 	signal_on_test_changed.emit(underlying_dictionary[button_pressed])
+
+func _update_path_to_current_test(new_path : String):
+	current_test_series.paths_to_tests[current_selected_index] = new_path
+
 
 func clear():
 	for button in test_button_list:

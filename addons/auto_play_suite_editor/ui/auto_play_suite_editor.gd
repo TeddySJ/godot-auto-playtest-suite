@@ -82,6 +82,12 @@ func _input(event: InputEvent) -> void:
 	if action_list == null:
 		return
 	
+	if event.is_action_pressed("ui_cancel"):
+		if test_series_view.current_selected_index == -1:
+			print("No tests in series")
+		else:
+			print(test_series_view.current_test_series.paths_to_tests[test_series_view.current_selected_index])
+	
 	action_list.handle_input(event)
 
 func setup_ui() -> void:
@@ -249,6 +255,10 @@ func _save_test(path : String = ""):
 	
 	current_test.take_over_path(path)
 	ResourceSaver.save(current_test, path)
+	
+	var uid : int = ResourceSaver.get_resource_id_for_path(path)
+	var uid_string : String = ResourceUID.id_to_text(uid)
+	test_series_view._update_path_to_current_test(uid_string)
 	signal_on_current_test_saved.emit()
 
 func _save_test_as():
@@ -261,7 +271,7 @@ func _save_test_as():
 	var file_dialog = FileDialog.new()
 	add_child(file_dialog)
 	file_dialog.show()
-	file_dialog.add_filter("*.tres")
+	file_dialog.add_filter("*.test.tres")
 	file_dialog.file_selected.connect(_save_file_chosen)
 
 func _save_file_chosen(path : String):
@@ -275,7 +285,7 @@ func _load_button_pressed():
 	var file_dialog = FileDialog.new()
 	add_child(file_dialog)
 	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE 
-	file_dialog.add_filter("*.tres")
+	file_dialog.add_filter("*.test.tres")
 	file_dialog.file_selected.connect(_load_test)
 	file_dialog.show()
 
@@ -283,6 +293,14 @@ func _load_test(path : String):
 	file_dialog = null
 	current_file_path = path
 	var test : AutoPlaySuiteTestResource = load(path)
+	
+	if test == null:
+		printerr("Selected file was not a Test Resource!")
+		return
+	
+	var uid_string : String = ResourceUID.id_to_text(ResourceSaver.get_resource_id_for_path(path))
+	
+	test_series_view._update_path_to_current_test(uid_string)
 	
 	_set_current_test(test.duplicate(true))
 
@@ -295,7 +313,7 @@ func _new_test():
 	test_name_field.text = test_name
 	current_test.test_name = test_name
 	action_list.empty_list()
-	test_series_view.add_button(current_test)
+	test_series_view.add_test(current_test)
 
 func _on_new_test_series():
 	_new_test()
@@ -379,12 +397,3 @@ func init_plugin():
 	custom_instructions.hook_into_suite()
 	current_test_series = AutoPlaySuiteTestSeriesResource.new()
 	current_test = AutoPlaySuiteTestResource.new()
-
-func _on_save_dialogue() -> void:
-	print("Hej!")
-	#var dialogue : DialogueResource = DialogueResource.new()
-	#dialogue.dialogue_id = "hehe"
-	#dialogue.entry_point = "mos"
-	#dialogue.nodes = []
-	#dialogue.take_over_path("res://testing.tres")
-	#dialogue.save_to_file("res://testing.tres")
