@@ -3,3 +3,4 @@
 *.import text eol=lf
 *.tres text eol=lf
 *.uid text eol=lf
+*.txt text eol=lf

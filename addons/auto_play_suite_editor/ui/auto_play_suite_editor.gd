@@ -71,18 +71,20 @@ func setup_ui() -> void:
 	if current_context == CurrentContext.Running:
 		_setup_in_single_scene()
 	
+	var ed_scale := EditorInterface.get_editor_scale()
+	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
 	
-	action_list.position = Vector2(100,100)
-	action_list.custom_minimum_size.x = 250
-	action_list.custom_minimum_size.y = 300
+	action_list.position = Vector2(100,100) * ed_scale
+	action_list.custom_minimum_size.x = 250 * ed_scale
+	action_list.custom_minimum_size.y = 300 * ed_scale
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
 	
 	action_view = AutoPlaySuiteUiActionView.new()
 	add_child(action_view)
-	action_view.position = Vector2(400, 100)
+	action_view.position = Vector2(400, 100) * ed_scale
 	action_view._add_drop_down_item(&"[UNSET]")
 	if current_context != CurrentContext.InEditor:
 		action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
@@ -90,43 +92,43 @@ func setup_ui() -> void:
 	action_view.signal_on_action_id_changed.connect(_on_selected_action_id_changed)
 	
 	run_test_button = Button.new()
-	run_test_button.position = Vector2(100, action_list.position.y + action_list.custom_minimum_size.y + 50)
+	run_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 50)  * ed_scale
 	run_test_button.text = "Run Test"
 	add_child(run_test_button)
 	run_test_button.pressed.connect(_run_current_test)
 	
 	run_all_button = Button.new()
-	run_all_button.position = run_test_button.position + Vector2(100, 0)
+	run_all_button.position = run_test_button.position + Vector2(100, 0) * ed_scale
 	run_all_button.text = "Run All"
 	add_child(run_all_button)
 	run_all_button.pressed.connect(_run_all_tests)
 
 	save_test_button = Button.new()
-	save_test_button.position = Vector2(100, run_all_button.position.y + 50)
+	save_test_button.position = Vector2(0, run_all_button.position.y) + Vector2(100, 50)  * ed_scale
 	save_test_button.text = "Save Test"
 	add_child(save_test_button)
 	save_test_button.pressed.connect(_save_test)
 	
 	save_test_as_button = Button.new()
-	save_test_as_button.position = save_test_button.position + Vector2(100, 0)
+	save_test_as_button.position = save_test_button.position + Vector2(100, 0) * ed_scale
 	save_test_as_button.text = "Save Test As"
 	add_child(save_test_as_button)
 	save_test_as_button.pressed.connect(_save_test_as)
 	
 	load_test_button = Button.new()
-	load_test_button.position = save_test_button.position + Vector2(0, 50)
+	load_test_button.position = save_test_button.position + Vector2(0, 50) * ed_scale
 	load_test_button.text = "Load Test"
 	add_child(load_test_button)
 	load_test_button.pressed.connect(_load_button_pressed)
 
 	new_test_button = Button.new()
-	new_test_button.position = load_test_button.position + Vector2(0, 50)
+	new_test_button.position = load_test_button.position + Vector2(0, 50) * ed_scale
 	new_test_button.text = "New Test"
 	add_child(new_test_button)
 	new_test_button.pressed.connect(_new_test)
 	
 	var debug_fill_button = Button.new()
-	debug_fill_button.position = new_test_button.position + Vector2(-100, 0)
+	debug_fill_button.position = new_test_button.position + Vector2(-100, 0) * ed_scale
 	debug_fill_button.text = "Debug Fill"
 	add_child(debug_fill_button)
 	debug_fill_button.pressed.connect(_debug_fill)

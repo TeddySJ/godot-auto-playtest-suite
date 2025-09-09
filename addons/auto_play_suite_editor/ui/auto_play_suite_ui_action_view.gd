@@ -17,21 +17,23 @@ var underlying_action : AutoPlaySuiteActionResource = null
 signal signal_on_action_id_changed(String)
 
 func _ready() -> void:
+	var ed_scale := EditorInterface.get_editor_scale()
+
 	main_panel = Panel.new()
-	main_panel.custom_minimum_size = Vector2(400, 400)
+	main_panel.custom_minimum_size = Vector2(400, 400) * ed_scale
 	add_child(main_panel)
 	drop_down = OptionButton.new()
-	drop_down.position = Vector2(30, 30)
-	drop_down.custom_minimum_size.x = 300
+	drop_down.position = Vector2(30, 30)* ed_scale
+	drop_down.custom_minimum_size.x = 300 * ed_scale
 	drop_down.item_selected.connect(_action_id_changed)
 	main_panel.add_child(drop_down)
 	
 	run_action_button = Button.new()
 	run_action_button.text = "Run"
-	run_action_button.position = Vector2(30, 300)
+	run_action_button.position = Vector2(30, 300) * ed_scale
 	main_panel.add_child(run_action_button)
 	
-	var float_var_pos := Vector2(30, 80)
+	var float_var_pos := Vector2(30, 80) * ed_scale
 	
 	var label := Label.new()
 	label.text = "Float Var:"
@@ -41,12 +43,12 @@ func _ready() -> void:
 	float_var_spinbox = SpinBox.new()
 	float_var_spinbox.min_value = -99999999
 	float_var_spinbox.max_value = 99999999
-	float_var_spinbox.position = float_var_pos + Vector2(100, -4)
-	float_var_spinbox.custom_minimum_size.x = 200
+	float_var_spinbox.position = float_var_pos + Vector2(100, -4)  * ed_scale
+	float_var_spinbox.custom_minimum_size.x = 200 * ed_scale
 	float_var_spinbox.value_changed.connect(_float_var_changed)
 	main_panel.add_child(float_var_spinbox)
 	
-	var string_var_pos := Vector2(30, 140)
+	var string_var_pos := Vector2(30, 140) * ed_scale
 	
 	label = Label.new()
 	label.text = "String Var:"
@@ -54,8 +56,8 @@ func _ready() -> void:
 	main_panel.add_child(label)
 	
 	string_var_line_edit = LineEdit.new()
-	string_var_line_edit.position = string_var_pos + Vector2(100, -4)
-	string_var_line_edit.custom_minimum_size.x = 200
+	string_var_line_edit.position = string_var_pos + Vector2(100, -4)  * ed_scale
+	string_var_line_edit.custom_minimum_size.x = 200 * ed_scale
 	string_var_line_edit.text_changed.connect(_string_var_changed)
 	main_panel.add_child(string_var_line_edit)
 	
