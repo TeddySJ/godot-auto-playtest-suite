@@ -82,7 +82,8 @@ func setup_ui() -> void:
 	add_child(action_view)
 	action_view.position = Vector2(400, 100)
 	action_view._add_drop_down_item(&"[UNSET]")
-	action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
+	if current_context != CurrentContext.InEditor:
+		action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
 	action_view.run_action_button.pressed.connect(_run_selected_action)
 	action_view.signal_on_action_id_changed.connect(_on_selected_action_id_changed)
 	

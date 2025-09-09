@@ -4,7 +4,7 @@ extends EditorPlugin
 var editor_instance : AutoPlaySuite
 
 func _enter_tree() -> void:
-	editor_instance = preload("res://addons/auto_play_suite_editor/auto_play_suite_editor.tscn").instantiate()
+	editor_instance = preload("res://addons/auto_play_suite_editor/ui/auto_play_suite_editor.tscn").instantiate()
 	get_editor_interface().get_editor_main_screen().add_child(editor_instance)
 	
 	editor_instance.current_context = AutoPlaySuite.CurrentContext.InPlugin_DontHaveScreen
