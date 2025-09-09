@@ -2,14 +2,13 @@
 
 LOGGING:
 	
-	Make the Logger be able to dump out its log as JSON via the debugger channel
+	Add a Log Viewer to the Editor UI
 	
-	Make the Editor Plugin be able to receive said JSON
+	Make the Log Viewer capable of viewing logs in a convenient way:
+		It can be fed a JSON style dictionary and display the content in a JSON tree style
 	
-	Let the Editor Plugin have a "latest logs" nested dictionary, like so: Dictionary[TestName,Dictionary[LoggerName, Log]]
+	Implement saving of the log as a JSON file
 	
-	Populate those dictionaries through the received messages via the debugger channel
-		It must be done as a stream, since the application might exit suddenly and might then fail to send logs
 
 === SPECIFICATION ==
 
