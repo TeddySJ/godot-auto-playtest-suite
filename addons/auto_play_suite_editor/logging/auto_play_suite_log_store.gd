@@ -15,7 +15,9 @@ static func get_shared() -> AutoPlaySuiteLogStore:
 	return s
 
 func handle_debugger_message(data: Array):
-	var dict : Dictionary = log_dictionary.get_or_add(data[0], {})
+	var main_dict : Dictionary = log_dictionary.get_or_add(AutoPlaySuite.Singleton.current_test.test_name, {})
+	
+	var dict : Dictionary = main_dict.get_or_add(data[0], {})
 	
 	var target : String = data[1]
 	if target == "Output Stream":

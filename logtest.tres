@@ -19,4 +19,5 @@ extra_vars = Array[String]([])
 
 [resource]
 script = ExtResource("2_1874p")
+test_name = "yolo test"
 actions = Array[ExtResource("1_afsrg")]([SubResource("Resource_5m7s1"), SubResource("Resource_j8drj")])
