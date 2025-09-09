@@ -9,16 +9,21 @@ var last_selected : TreeItem = null
 var backing_dictionary : Dictionary[TreeItem, Variant]
 
 signal signal_on_cell_selected
+signal signal_on_item_added_and_bound
+signal signal_on_item_removed
+signal signal_on_item_order_changed
 
 func add_and_bind_item(text : String, value, at_index : int = -1):
 	var new_item = create_item(root, at_index)
 	
 	new_item.set_text(0, text)
 	backing_dictionary[new_item] = value
+	signal_on_item_added_and_bound.emit()
 
 func remove_item(to_remove : TreeItem):
 	backing_dictionary.erase(to_remove)
 	root.remove_child(to_remove)
+	signal_on_item_added_and_bound.emit()
 	
 func remove_item_at_index(index : int):
 	remove_item(root.get_child(index))
@@ -96,6 +101,7 @@ func _drop_data(at_position: Vector2, data):
 		item.move_after(first_item)
 	
 	all_selected.erase(first_item)
+	signal_on_item_order_changed.emit()
 
 func _on_cell_selected() -> void:
 	last_selected = get_selected()

@@ -32,6 +32,7 @@ var show_logs_button : Button
 
 var item_affected_by_popup : TreeItem
 
+var currently_setting_new_test : bool = false
 
 var current_context : CurrentContext = CurrentContext.Running
 var is_in_editor : bool:
@@ -94,12 +95,14 @@ func setup_ui() -> void:
 	test_series_view = AutoPlaySuiteUiTestSeriesView.new()
 	test_series_view.custom_minimum_size.x = 700 * ed_scale
 	test_series_view.custom_minimum_size.y = 80 * ed_scale
+	test_series_view.signal_on_test_changed.connect(_changed_active_test_of_series)
 	add_child(test_series_view)
 	
 	test_series_view.position = Vector2(100,10) * ed_scale
 	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
+	action_list.signal_on_list_changed.connect(_sync_current_test_to_list)
 	
 	action_list.position = Vector2(100,100) * ed_scale
 	action_list.custom_minimum_size.x = 250 * ed_scale
@@ -110,6 +113,7 @@ func setup_ui() -> void:
 	var right_side_view_position := Vector2(400, 100) * ed_scale
 	
 	action_view = AutoPlaySuiteUiActionView.new()
+	action_view.signal_on_action_changed.connect(_sync_current_test_to_list)
 	add_child(action_view)
 	action_view.position = right_side_view_position
 	action_view._add_drop_down_item(&"[UNSET]")
@@ -239,11 +243,8 @@ func _save_test(path : String = ""):
 		path = current_file_path
 	
 	current_file_path = path
-	current_test.actions.clear()
 	
-	var all_actions : Array = action_list.get_all_items()
-	
-	current_test.actions.append_array(all_actions)
+	_sync_current_test_to_list()
 	
 	current_test.take_over_path(path)
 	ResourceSaver.save(current_test, path)
@@ -282,13 +283,7 @@ func _load_test(path : String):
 	current_file_path = path
 	var test : AutoPlaySuiteTestResource = load(path)
 	
-	current_test = test.duplicate(true)
-	
-	test_name_field.text = current_test.test_name
-	
-	action_list.empty_list()
-	for action in current_test.actions:
-		action_list.add_and_bind_item(action.action_id, action)
+	_set_current_test(test.duplicate(true))
 
 func _new_test():
 	current_file_path = ""
@@ -300,6 +295,26 @@ func _new_test():
 	current_test.test_name = test_name
 	action_list.empty_list()
 	test_series_view.add_button(current_test)
+
+func _sync_current_test_to_list():
+	if currently_setting_new_test:
+		return
+	
+	current_test.actions.clear()
+	var all_actions : Array = action_list.get_all_items()
+	current_test.actions.append_array(all_actions)
+
+func _changed_active_test_of_series(new_test : AutoPlaySuiteTestResource):
+	_set_current_test(new_test)
+
+func _set_current_test(new_test : AutoPlaySuiteTestResource):
+	currently_setting_new_test = true
+	current_test = new_test
+	test_name_field.text = current_test.test_name
+	action_list.empty_list()
+	for action in current_test.actions:
+		action_list.add_and_bind_item(action.action_id, action)	
+	currently_setting_new_test = false
 
 func _test_name_field_changed(new_test : String):
 	current_test.test_name = test_name_field.text

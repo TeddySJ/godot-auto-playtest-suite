@@ -15,6 +15,7 @@ var string_var_line_edit : LineEdit
 var underlying_action : AutoPlaySuiteActionResource = null
 
 signal signal_on_action_id_changed(String)
+signal signal_on_action_changed
 
 func _ready() -> void:
 	var ed_scale : float = 1
@@ -77,12 +78,15 @@ func _action_id_changed(index : int):
 	signal_on_action_id_changed.emit(drop_down.text)
 	float_var_spinbox.value = 0
 	string_var_line_edit.text = ""
+	signal_on_action_changed.emit()
 
 func _string_var_changed(new_text : String):
 	underlying_action.string_var = new_text
+	signal_on_action_changed.emit()
 
 func _float_var_changed(new_value : float):
 	underlying_action.float_var = new_value
+	signal_on_action_changed.emit()
 
 func _set_action(action_to_set : AutoPlaySuiteActionResource):
 	underlying_action = action_to_set

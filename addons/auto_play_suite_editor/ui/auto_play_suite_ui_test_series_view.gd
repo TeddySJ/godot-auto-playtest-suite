@@ -11,6 +11,8 @@ var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 
 var current_test_series : AutoPlaySuiteTestSeriesResource
 
+signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
+
 func _ready() -> void:
 	if current_test_series == null:
 		current_test_series = AutoPlaySuiteTestSeriesResource.new()
@@ -58,14 +60,18 @@ func add_button(test_resource : AutoPlaySuiteTestResource):
 	var button := Button.new()
 	button.text = test_resource.test_name
 	test_button_list.append(button)
+	if test_button_list.size() == 1:
+		button.disabled = true
 	underlying_dictionary[button] = test_resource
 	button.pressed.connect(func():_test_button_pressed(button))
 	button.focus_mode = Control.FOCUS_NONE
 	hbox_container.add_child(button)
 
 func _test_button_pressed(button_pressed : Button):
-	print("Test name: ", button_pressed.text, " Series name: ", current_test_series.test_series_name)
-	pass
+	for button in test_button_list:
+		button.disabled = false
+	button_pressed.disabled = true
+	signal_on_test_changed.emit(underlying_dictionary[button_pressed])
 
 func clear():
 	for button in test_button_list:

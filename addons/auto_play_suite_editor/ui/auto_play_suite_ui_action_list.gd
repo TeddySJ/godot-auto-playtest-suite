@@ -1,17 +1,25 @@
 extends ReorderableTree
 class_name AutoPlaySuiteActionList
 
+signal signal_on_list_changed
+
 func _ready() -> void:
 	super._ready()
 	focus_mode = FOCUS_NONE
 	allow_rmb_select = true
 	drop_mode_flags = DropModeFlags.DROP_MODE_INBETWEEN
 	select_mode = Tree.SELECT_MULTI
+	signal_on_item_added_and_bound.connect(_emit_list_changed)
+	signal_on_item_order_changed.connect(_emit_list_changed)
+	signal_on_item_removed.connect(_emit_list_changed)
 
 func empty_list():
 	clear()
 	backing_dictionary.clear()
 	root = create_item()
+
+func _emit_list_changed():
+	signal_on_list_changed.emit()
 
 func update_display_text_of_selected_index():
 	last_selected.set_text(0, backing_dictionary[last_selected].action_id)
