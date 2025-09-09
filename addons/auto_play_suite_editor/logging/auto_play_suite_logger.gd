@@ -6,6 +6,8 @@ var forward_output_to_editor : bool = false
 var dictionary_log : Dictionary[String, Variant]
 var output_log : Array[String]
 
+var logger_name : String = "[Undefined Logger]"
+
 func _ready() -> void:
 	setup()
 
@@ -22,6 +24,8 @@ func write_to_output(string):
 	output_log.append(string)
 	if forward_output_to_editor:
 		print(string)
+	
+	EngineDebugger.send_message("aps:logging", [logger_name, "Output Stream", string])
 
 func write_as_entry(key : String, data):
 	dictionary_log[key] = data

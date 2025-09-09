@@ -10,6 +10,10 @@ func _enter_tree() -> void:
 	editor_instance.current_context = AutoPlaySuite.CurrentContext.InPlugin_DontHaveScreen
 	editor_instance.init_plugin()
 	main_screen_changed.connect(editor_instance._on_editor_main_screen_changed)
+	
+	var editor_debugger_plugin : EditorDebuggerPlugin = preload("uid://dewiotl8wwqwn").new()
+	add_debugger_plugin(editor_debugger_plugin)
+	EngineDebugger.register_message_capture("aps", editor_debugger_plugin._capture)
 	_make_visible(false)
 
 func _exit_tree() -> void:

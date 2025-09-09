@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AutoPlaySuiteTestResource" load_steps=5 format=3 uid="uid://bw6atirlu2nl4"]
+
+[ext_resource type="Script" uid="uid://ikormuqgcg8x" path="res://addons/auto_play_suite_editor/resource_definitions/auto_play_suite_action_resource.gd" id="1_afsrg"]
+[ext_resource type="Script" uid="uid://06aowi87ma76" path="res://addons/auto_play_suite_editor/resource_definitions/auto_play_suite_test_resource.gd" id="2_1874p"]
+
+[sub_resource type="Resource" id="Resource_5m7s1"]
+script = ExtResource("1_afsrg")
+action_id = &"[Debug] Print String"
+float_var = 0.0
+string_var = "Nuuu kör vi!"
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_j8drj"]
+script = ExtResource("1_afsrg")
+action_id = &"[Logging] Start Logger"
+float_var = 0.0
+string_var = "AutoPlaySuiteCustomLogger_Test"
+extra_vars = Array[String]([])
+
+[resource]
+script = ExtResource("2_1874p")
+actions = Array[ExtResource("1_afsrg")]([SubResource("Resource_5m7s1"), SubResource("Resource_j8drj")])

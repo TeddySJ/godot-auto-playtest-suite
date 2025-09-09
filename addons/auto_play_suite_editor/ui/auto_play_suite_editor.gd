@@ -68,7 +68,7 @@ func _input(event: InputEvent) -> void:
 func setup_ui() -> void:
 	if current_context == CurrentContext.Running:
 		_setup_in_single_scene()
-
+	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
 	
@@ -137,6 +137,10 @@ func _setup_in_single_scene():
 
 func _setup_in_editor():
 	pass
+
+func _logger_message_received(data):
+	print("Received message from debugger!")
+	#print(data)
 
 func _on_action_list_item_selected():
 	var selected = action_list.last_selected
