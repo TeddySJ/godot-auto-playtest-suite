@@ -17,6 +17,8 @@ var logs : AutoPlaySuiteLogStore
 
 var file_dialog : FileDialog
 
+var test_name_field : LineEdit
+
 var run_test_button : Button
 var run_all_button : Button
 var save_test_button : Button
@@ -98,6 +100,19 @@ func setup_ui() -> void:
 	action_view.run_action_button.pressed.connect(_run_selected_action)
 	action_view.signal_on_action_id_changed.connect(_on_selected_action_id_changed)
 	
+	test_name_field = LineEdit.new()
+	test_name_field.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 10)  * ed_scale
+	test_name_field.custom_minimum_size.x = 200 * ed_scale
+	test_name_field.text_changed.connect(_test_name_field_changed)
+	add_child(test_name_field)
+	
+	var test_name_label = Label.new()
+	test_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	test_name_label.text = "Test Name:"
+	test_name_label.position = test_name_field.position + Vector2(-210, 5)  * ed_scale
+	test_name_label.custom_minimum_size.x = 200 * ed_scale
+	add_child(test_name_label)
+	
 	run_test_button = Button.new()
 	run_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 50)  * ed_scale
 	run_test_button.text = "Run Test"
@@ -160,6 +175,8 @@ func setup_ui() -> void:
 	
 	if is_in_editor:
 		_setup_in_editor()
+	
+	new_test_button.pressed.emit()
 
 func _setup_in_single_scene():
 	init_plugin()
@@ -256,7 +273,15 @@ func _load_test(path : String):
 func _new_test():
 	current_file_path = ""
 	current_test = AutoPlaySuiteTestResource.new()
+	var test_name : String = "test #"
+	for n in 4:
+		test_name += str(randi_range(0,9)) 
+	test_name_field.text = test_name
+	current_test.test_name = test_name
 	action_list.empty_list()
+
+func _test_name_field_changed(new_test : String):
+	current_test.test_name = test_name_field.text
 
 func _debug_fill():
 	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
