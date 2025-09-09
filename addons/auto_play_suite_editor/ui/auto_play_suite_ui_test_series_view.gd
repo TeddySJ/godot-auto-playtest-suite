@@ -89,6 +89,7 @@ func _ready() -> void:
 	remove_test_button = Button.new()
 	remove_test_button.text = "Remove Test"
 	remove_test_button.position = button_start_pos + Vector2(470, 0) * ed_scale
+	remove_test_button.pressed.connect(_remove_test_button_pressed)
 	add_child(remove_test_button)
 
 func _new_series_button_pressed():
@@ -222,6 +223,23 @@ func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = 
 	if add_to_series:
 		current_test_series.paths_to_tests.append("")
 		_test_button_pressed(button)
+
+func _remove_test_button_pressed():
+	current_test_series.paths_to_tests.remove_at(current_selected_index)
+	test_button_list[current_selected_index].queue_free()
+	test_button_list.remove_at(current_selected_index)
+	
+	if current_selected_index > 0:
+		current_selected_index -= 1
+	
+	if test_button_list.size() == 0:
+		_on_all_tests_removed()
+		return
+	
+	_test_button_pressed(test_button_list[0])
+
+func _on_all_tests_removed():
+	print("All tests removed!")
 
 func _test_button_pressed(button_pressed : Button):
 	for button in test_button_list:
