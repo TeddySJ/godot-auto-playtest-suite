@@ -11,6 +11,7 @@ var current_file_path : String = ""
 var current_test_series : AutoPlaySuiteTestSeriesResource
 var current_test : AutoPlaySuiteTestResource
 
+var test_series_view : AutoPlaySuiteUiTestSeriesView
 var action_list : AutoPlaySuiteActionList
 var action_view : AutoPlaySuiteUiActionView
 var logs_view : AutoPlaySuiteUiLogViewer
@@ -89,6 +90,13 @@ func setup_ui() -> void:
 	var ed_scale : float = 1
 	if Engine.is_editor_hint():
 		ed_scale = EditorInterface.get_editor_scale()
+	
+	test_series_view = AutoPlaySuiteUiTestSeriesView.new()
+	test_series_view.custom_minimum_size.x = 700 * ed_scale
+	test_series_view.custom_minimum_size.y = 80 * ed_scale
+	add_child(test_series_view)
+	
+	test_series_view.position = Vector2(100,10) * ed_scale
 	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
