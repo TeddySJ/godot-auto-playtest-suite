@@ -7,6 +7,12 @@ var base_panel_container : PanelContainer
 var hbox_container : HBoxContainer
 var test_button_list : Array[Button]
 
+var new_series_button : Button
+var load_series_button : Button
+var save_series_button : Button
+var save_series_as_button : Button
+var remove_test_button : Button
+
 var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 
 var current_test_series : AutoPlaySuiteTestSeriesResource
@@ -36,15 +42,39 @@ func _ready() -> void:
 	
 	_randomize_test_series_name()
 	
+	var size_ratio_for_panel : float = 0.6
+	var size_ratio_for_save_buttons : float = 1 - size_ratio_for_panel
+	
 	base_panel_container = PanelContainer.new()
 	base_panel_container.position = Vector2(0, 35) * ed_scale
-	base_panel_container.custom_minimum_size = Vector2(custom_minimum_size.x * 0.6, 50)
+	base_panel_container.custom_minimum_size = Vector2(custom_minimum_size.x * size_ratio_for_panel, 50)
 	add_child(base_panel_container)
 	var scroll_container := ScrollContainer.new()
 	base_panel_container.add_child(scroll_container)
 	hbox_container = HBoxContainer.new()
 	scroll_container.add_child(hbox_container)
 	
+	var button_start_pos : Vector2 = test_series_name_input.position + Vector2(test_series_name_input.custom_minimum_size.x, 0)
+	
+	new_series_button = Button.new()
+	new_series_button.text = "New Series"
+	new_series_button.position = button_start_pos + Vector2(10, 0) * ed_scale
+	add_child(new_series_button)
+	
+	load_series_button = Button.new()
+	load_series_button.text = "Load Series"
+	load_series_button.position = button_start_pos + Vector2(120, 0) * ed_scale
+	add_child(load_series_button)
+
+	save_series_button = Button.new()
+	save_series_button.text = "Save Series"
+	save_series_button.position = button_start_pos + Vector2(230, 0) * ed_scale
+	add_child(save_series_button)
+	
+	remove_test_button = Button.new()
+	remove_test_button.text = "Remove Test"
+	remove_test_button.position = button_start_pos + Vector2(340, 0) * ed_scale
+	add_child(remove_test_button)
 
 func _test_series_name_changed(new_text : String):
 	current_test_series.test_series_name = new_text
@@ -52,7 +82,7 @@ func _test_series_name_changed(new_text : String):
 func _randomize_test_series_name():
 	var rand_name : String = "Series #"
 	for n in 4:
-		rand_name += str(randi_range(0, 1))
+		rand_name += str(randi_range(0, 9))
 	test_series_name_input.text = rand_name
 	current_test_series.test_series_name = rand_name
 
