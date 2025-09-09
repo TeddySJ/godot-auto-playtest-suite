@@ -299,6 +299,7 @@ func _new_test():
 	test_name_field.text = test_name
 	current_test.test_name = test_name
 	action_list.empty_list()
+	test_series_view.add_button(current_test)
 
 func _test_name_field_changed(new_test : String):
 	current_test.test_name = test_name_field.text

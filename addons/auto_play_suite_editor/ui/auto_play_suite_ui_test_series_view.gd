@@ -31,7 +31,8 @@ func _ready() -> void:
 	test_series_name_label.position = test_series_name_input.position + Vector2(-210, 5)  * ed_scale
 	test_series_name_label.custom_minimum_size.x = 200 * ed_scale
 	add_child(test_series_name_label)
-
+	
+	_randomize_test_series_name()
 	
 	base_panel_container = PanelContainer.new()
 	base_panel_container.position = Vector2(0, 35) * ed_scale
@@ -42,26 +43,16 @@ func _ready() -> void:
 	hbox_container = HBoxContainer.new()
 	scroll_container.add_child(hbox_container)
 	
-	var resource : AutoPlaySuiteTestResource = AutoPlaySuiteTestResource.new()
-	resource.test_name = "Test 1"
-	add_button(resource)
-	
-	resource = AutoPlaySuiteTestResource.new()
-	resource.test_name = "Test 24"
-	add_button(resource)
-
-	resource = AutoPlaySuiteTestResource.new()
-	resource.test_name = "Test Apa"
-	add_button(resource)
-	add_button(resource)
-	add_button(resource)
-	add_button(resource)
-	add_button(resource)
-	add_button(resource)
-	add_button(resource)
 
 func _test_series_name_changed(new_text : String):
 	current_test_series.test_series_name = new_text
+
+func _randomize_test_series_name():
+	var rand_name : String = "Series #"
+	for n in 4:
+		rand_name += str(randi_range(0, 1))
+	test_series_name_input.text = rand_name
+	current_test_series.test_series_name = rand_name
 
 func add_button(test_resource : AutoPlaySuiteTestResource):
 	var button := Button.new()
