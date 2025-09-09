@@ -6,6 +6,9 @@ var forward_output_to_editor : bool = false
 var dictionary_log : Dictionary[String, Variant]
 var output_log : Array[String]
 
+func _ready() -> void:
+	setup()
+
 func setup():
 	pass
 

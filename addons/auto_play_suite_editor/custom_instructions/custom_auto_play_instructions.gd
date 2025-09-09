@@ -5,6 +5,7 @@ var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefi
 	&"[Debug] Print Float" : AutoPlaySuiteInstructionDefinition.Create(_action_debug_print_float, "Prints a float"),
 	&"[Debug] Print Hi X Seconds" : AutoPlaySuiteInstructionDefinition.Create(_action_print_hi, "Prints 'Hi' every frame for [float] seconds", _action_process_print_hi),
 	&"[Debug] Quit" : AutoPlaySuiteInstructionDefinition.Create(_action_exit_game, "Exits the game"),
+	&"[Logging] Start Logger" : AutoPlaySuiteInstructionDefinition.Create(_start_logger, "Instances a logger of [string] class"),
 }
 
 func hook_into_suite():
@@ -32,6 +33,13 @@ func _action_print_hi(arguments : AutoPlaySuiteActionResource):
 func _action_process_print_hi(delta: float, arguments : AutoPlaySuiteActionResource):
 	print("Hi! ", arguments.float_var, " seconds remaining...")
 	arguments.float_var -= delta
+
+func _start_logger(arguments : AutoPlaySuiteActionResource):
+	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.instantiate_by_class_name(arguments.string_var)
+	if logger == null:
+		return
+	
+	Engine.get_main_loop().root.add_child.call_deferred(logger)
 
 
 #endregion
