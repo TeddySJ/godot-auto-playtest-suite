@@ -166,10 +166,12 @@ func _save_test_series_as():
 	if !_can_save_series():
 		return
 	
-	var file_dialog = FileDialog.new()
+	file_dialog = FileDialog.new()
 	add_child(file_dialog)
 	file_dialog.show()
 	file_dialog.add_filter("*.testseries.tres", "Test Series Resource")
+	_set_file_dialog_size_and_position()
+	file_dialog.canceled.connect(_file_dialog_canceled)
 	file_dialog.file_selected.connect(_save_file_chosen)
 
 func _save_file_chosen(path : String):
@@ -180,10 +182,12 @@ func _load_series_button_pressed():
 	if file_dialog != null:
 		return
 	
-	var file_dialog = FileDialog.new()
+	file_dialog = FileDialog.new()
 	add_child(file_dialog)
 	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE 
 	file_dialog.add_filter("*.testseries.tres", "Test Series Resource")
+	_set_file_dialog_size_and_position()
+	file_dialog.canceled.connect(_file_dialog_canceled)
 	file_dialog.file_selected.connect(_load_series)
 	file_dialog.show()
 
@@ -197,6 +201,13 @@ func _load_series(path : String):
 
 	current_file_path = path
 	_set_current_series(series.duplicate(true))
+
+func _file_dialog_canceled():
+	file_dialog = null
+
+func _set_file_dialog_size_and_position():
+	file_dialog.min_size = Vector2(600, 400) * AutoPlaySuite._get_plugin_singleton().editor_scale
+	file_dialog.position = global_position
 
 func _set_current_series(new_series : AutoPlaySuiteTestSeriesResource):
 	clear()

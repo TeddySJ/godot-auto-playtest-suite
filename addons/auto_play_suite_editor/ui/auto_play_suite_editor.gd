@@ -6,6 +6,16 @@ static var Singleton : AutoPlaySuite:
 	get:
 		return _get_plugin_singleton()
 
+enum RightPaneView
+{
+	Hidden = 0,
+	ActionView = 1,
+	LogView = 2,
+}
+
+var editor_scale : float = 1
+var right_pane_view : RightPaneView = RightPaneView.Hidden
+
 var current_file_path : String = ""
 
 var current_test_series : AutoPlaySuiteTestSeriesResource
@@ -68,6 +78,9 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		current_context = CurrentContext.InEditor
 	setup_ui.call_deferred()
+	if Engine.is_editor_hint():
+		editor_scale = EditorInterface.get_editor_scale()
+
 
 func _on_editor_main_screen_changed(screen_name):
 	if screen_name == "AutoTest":
@@ -214,14 +227,17 @@ func _logger_message_received(data: Array):
 func _show_action_view():
 	_hide_all_right_side_elements()
 	action_view.visible = true
+	right_pane_view = RightPaneView.ActionView
 
 func _show_logger():
 	_hide_all_right_side_elements()
 	logs_view.visible = true
+	right_pane_view = RightPaneView.LogView
 
 func _hide_all_right_side_elements():
 	action_view.visible = false
 	logs_view.visible = false
+	right_pane_view = RightPaneView.Hidden
 
 func _on_action_list_item_selected():
 	var selected = action_list.last_selected
@@ -238,9 +254,6 @@ func _save_test(path : String = ""):
 	if action_list.get_item_count() == 0:
 		return
 	
-	print("Test being saved")
-	print("Curr Path: ", current_file_path)
-	
 	if path == "":
 		if current_file_path == "":
 			_save_test_as()
@@ -249,7 +262,6 @@ func _save_test(path : String = ""):
 	
 	if path.begins_with("u"):
 		path = ResourceUID.get_id_path(ResourceUID.text_to_id(path))
-		print("Path became: ", path)
 	
 	current_file_path = path
 	
@@ -270,10 +282,12 @@ func _save_test_as():
 	if file_dialog != null:
 		return
 	
-	var file_dialog = FileDialog.new()
+	file_dialog = FileDialog.new()
 	add_child(file_dialog)
+	_set_file_dialog_size_and_position()
 	file_dialog.show()
 	file_dialog.add_filter("*.test.tres")
+	file_dialog.canceled.connect(_file_dialog_canceled)
 	file_dialog.file_selected.connect(_save_file_chosen)
 
 func _save_file_chosen(path : String):
@@ -284,12 +298,18 @@ func _load_button_pressed():
 	if file_dialog != null:
 		return
 	
-	var file_dialog = FileDialog.new()
+	file_dialog = FileDialog.new()
 	add_child(file_dialog)
 	file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE 
 	file_dialog.add_filter("*.test.tres")
 	file_dialog.file_selected.connect(_load_test)
+	_set_file_dialog_size_and_position()
+	file_dialog.canceled.connect(_file_dialog_canceled)
 	file_dialog.show()
+
+func _set_file_dialog_size_and_position():
+	file_dialog.min_size = Vector2(600, 400) * editor_scale
+	file_dialog.position = global_position
 
 func _load_test(path : String):
 	file_dialog = null
@@ -305,6 +325,9 @@ func _load_test(path : String):
 	test_series_view._update_path_to_current_test(uid_string)
 	
 	_set_current_test(test.duplicate(true))
+
+func _file_dialog_canceled():
+	file_dialog = null
 
 func _new_test():
 	current_file_path = ""
@@ -377,9 +400,15 @@ func _prepare_for_testing():
 	_setup_environment_for_testing()
 
 func _end_testing():
-	logs_view.set_data(logs.log_dictionary)
+	_load_log_of_current_test()
 	_show_logger()
 	_restore_environment_after_testing()
+
+func _load_log_of_current_test():
+	if !logs.log_dictionary.has(current_test.test_name):
+		return
+	
+	logs_view.set_data(logs.log_dictionary[current_test.test_name])
 
 func _setup_environment_for_testing():
 	OS.set_environment("DoAutoTesting", "true")
