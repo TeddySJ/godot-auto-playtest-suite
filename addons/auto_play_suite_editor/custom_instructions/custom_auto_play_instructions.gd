@@ -35,12 +35,13 @@ func _action_process_print_hi(delta: float, arguments : AutoPlaySuiteActionResou
 	arguments.float_var -= delta
 
 func _start_logger(arguments : AutoPlaySuiteActionResource):
+	arguments.finished = true
 	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.instantiate_by_class_name(arguments.string_var)
 	if logger == null:
+		print("Failed to create logger of type: ", arguments.string_var)
 		return
 	
 	Engine.get_main_loop().root.add_child.call_deferred(logger)
-	arguments.finished = true
 
 
 #endregion

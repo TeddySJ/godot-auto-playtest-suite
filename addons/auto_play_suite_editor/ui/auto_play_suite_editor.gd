@@ -41,6 +41,7 @@ var show_logs_button : Button
 var item_affected_by_popup : TreeItem
 
 var tests_to_run : Array[AutoPlaySuiteTestResource]
+var currently_running_test : AutoPlaySuiteTestResource = null
 
 var currently_setting_new_test : bool = false
 
@@ -353,7 +354,6 @@ func _sync_current_test_to_list():
 
 func _changed_active_test_of_series(new_test : AutoPlaySuiteTestResource):
 	current_file_path = test_series_view._get_test_uid_path(new_test)
-	print(current_file_path)
 	_set_current_test(new_test)
 
 func _set_current_test(new_test : AutoPlaySuiteTestResource):
@@ -364,6 +364,7 @@ func _set_current_test(new_test : AutoPlaySuiteTestResource):
 	for action in current_test.actions:
 		action_list.add_and_bind_item(action.action_id, action)	
 	currently_setting_new_test = false
+	_load_log_of_current_test()
 
 func _test_name_field_changed(new_name : String):
 	current_test.test_name = new_name
@@ -403,9 +404,11 @@ func _end_testing():
 	_load_log_of_current_test()
 	_show_logger()
 	_restore_environment_after_testing()
+	currently_running_test = null
 
 func _load_log_of_current_test():
 	if !logs.log_dictionary.has(current_test.test_name):
+		logs_view.set_data({"No Data":"Please run test to generate log data"})
 		return
 	
 	logs_view.set_data(logs.log_dictionary[current_test.test_name])
@@ -414,6 +417,7 @@ func _setup_environment_for_testing():
 	OS.set_environment("DoAutoTesting", "true")
 
 func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finished : Callable):
+	currently_running_test = test_resource
 	var path := test_series_view._get_test_uid_path(test_resource)
 	_set_current_test_file_path_environment(path)
 	

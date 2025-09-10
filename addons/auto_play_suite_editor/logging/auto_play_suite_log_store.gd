@@ -15,7 +15,7 @@ static func get_shared() -> AutoPlaySuiteLogStore:
 	return s
 
 func handle_debugger_message(data: Array):
-	var main_dict : Dictionary = log_dictionary.get_or_add(AutoPlaySuite.Singleton.current_test.test_name, {})
+	var main_dict : Dictionary = log_dictionary.get_or_add(AutoPlaySuite._get_plugin_singleton().currently_running_test.test_name, {})
 	
 	var dict : Dictionary = main_dict.get_or_add(data[0], {})
 	
