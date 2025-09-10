@@ -40,6 +40,7 @@ func _start_logger(arguments : AutoPlaySuiteActionResource):
 		return
 	
 	Engine.get_main_loop().root.add_child.call_deferred(logger)
+	arguments.finished = true
 
 
 #endregion
