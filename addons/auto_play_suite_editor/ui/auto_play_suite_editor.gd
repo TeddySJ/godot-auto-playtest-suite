@@ -238,11 +238,18 @@ func _save_test(path : String = ""):
 	if action_list.get_item_count() == 0:
 		return
 	
+	print("Test being saved")
+	print("Curr Path: ", current_file_path)
+	
 	if path == "":
 		if current_file_path == "":
 			_save_test_as()
 			return
 		path = current_file_path
+	
+	if path.begins_with("u"):
+		path = ResourceUID.get_id_path(ResourceUID.text_to_id(path))
+		print("Path became: ", path)
 	
 	current_file_path = path
 	
@@ -322,6 +329,8 @@ func _sync_current_test_to_list():
 	current_test.actions.append_array(all_actions)
 
 func _changed_active_test_of_series(new_test : AutoPlaySuiteTestResource):
+	current_file_path = test_series_view._get_test_uid_path(new_test)
+	print(current_file_path)
 	_set_current_test(new_test)
 
 func _set_current_test(new_test : AutoPlaySuiteTestResource):
@@ -358,24 +367,26 @@ func _run_current_test():
 	
 	_save_test()
 	
-	logs.clear_logs()
-	
-	_setup_environment_for_testing()
+	_prepare_for_testing()
 	
 	_run_single_test(current_test, _end_testing)
 	
 
+func _prepare_for_testing():
+	logs.clear_logs()
+	_setup_environment_for_testing()
+
 func _end_testing():
 	logs_view.set_data(logs.log_dictionary)
 	_show_logger()
-	
 	_restore_environment_after_testing()
 
 func _setup_environment_for_testing():
 	OS.set_environment("DoAutoTesting", "true")
 
 func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finished : Callable):
-	_set_current_test_file_path_environment(test_series_view._get_test_uid_path(test_resource))
+	var path := test_series_view._get_test_uid_path(test_resource)
+	_set_current_test_file_path_environment(path)
 	
 	EditorInterface.play_main_scene()
 	await _wait_until_game_exits()
@@ -392,9 +403,19 @@ func _restore_environment_after_testing():
 func _run_all_tests():
 	tests_to_run.clear()
 	tests_to_run.append_array(test_series_view._get_all_tests_in_order())
+	
+	_prepare_for_testing()
+	_run_next_test()
+	
 
 func _run_next_test():
-	pass
+	if tests_to_run.size() == 0:
+		_end_testing()
+		return
+	
+	var next_test = tests_to_run[0]
+	tests_to_run.remove_at(0)
+	_run_single_test(next_test, _run_next_test)
 
 func _wait_until_game_exits() -> void:
 	# Give the editor one frame to flip into "playing" state.

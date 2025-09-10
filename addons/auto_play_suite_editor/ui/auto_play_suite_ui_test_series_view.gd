@@ -276,16 +276,32 @@ func _on_run_all_tests_button_pressed():
 
 func _save_all_tests_in_series():
 	var origin_index : int = current_selected_index
-	for button in test_button_list:
-		_change_to_test(underlying_dictionary[button])
-		AutoPlaySuite._get_plugin_singleton()._save_test()
+	for n in test_button_list.size():
+		current_selected_index = n
+		var test = underlying_dictionary[test_button_list[n]]
+		_change_to_test(test)
+		AutoPlaySuite._get_plugin_singleton()._save_test(_get_test_uid_path(test))
+		
 	_test_button_pressed(test_button_list[origin_index])
 
 func _get_all_tests_in_order() -> Array[AutoPlaySuiteTestResource]:
 	var ret : Array[AutoPlaySuiteTestResource] = []
-	for button in run_all_tests_button:
+	for button in test_button_list:
 		ret.append(underlying_dictionary[button])
+	
 	return ret
+
+func _get_test_uid_path(test_resource : AutoPlaySuiteTestResource) -> String:
+	var index : int = -1
+	for n in test_button_list.size():
+		if test_resource.test_name == underlying_dictionary[test_button_list[n]].test_name:
+			index = n
+			break
+	if index == -1:
+		printerr("Could not find index of test resource! (_get_test_uid_path)")
+		return ""
+	var uid = current_test_series.paths_to_tests[index]
+	return uid
 
 func _test_button_pressed(button_pressed : Button):
 	for button in test_button_list:
