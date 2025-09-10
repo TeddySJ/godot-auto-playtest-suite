@@ -6,6 +6,7 @@ var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefi
 	&"[Debug] Print Hi X Seconds" : AutoPlaySuiteInstructionDefinition.Create(_action_print_hi, "Prints 'Hi' every frame for [float] seconds", _action_process_print_hi),
 	&"[Debug] Quit" : AutoPlaySuiteInstructionDefinition.Create(_action_exit_game, "Exits the game"),
 	&"[Logging] Start Logger" : AutoPlaySuiteInstructionDefinition.Create(_start_logger, "Instances a logger of [string] class"),
+	&"[Logging] Instruct Logger" : AutoPlaySuiteInstructionDefinition.Create(_instruct_logger, "Instructs an existing logger of [string] class"),
 }
 
 func hook_into_suite():
@@ -42,6 +43,15 @@ func _start_logger(arguments : AutoPlaySuiteActionResource):
 		return
 	
 	Engine.get_main_loop().root.add_child.call_deferred(logger)
+
+func _instruct_logger(arguments : AutoPlaySuiteActionResource):
+	arguments.finished = true
+	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.get_logger_by_class_name(arguments.string_var)
+	if logger == null:
+		print("Failed to get logger of type: ", arguments.string_var)
+		return
+	
+	logger._on_instruction(arguments)
 
 
 #endregion

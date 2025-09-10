@@ -14,8 +14,8 @@ func _process(delta: float) -> void:
 		write_to_output("A second has passed!")
 		time_passed -= 1
 
-func _on_auto_play_action(resource : AutoPlaySuiteActionResource):
-	if resource.float_var == 0:
+func _on_instruction(action_resource : AutoPlaySuiteActionResource):
+	if action_resource.float_var == 0:
 		write_to_output("It was like this!")
 	else:
 		write_to_output("It was like that!")

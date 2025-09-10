@@ -1,6 +1,8 @@
 extends Node
 class_name AutoPlaySuiteLogger
 
+static var CreatedLoggers : Dictionary[String, AutoPlaySuiteLogger]
+
 var forward_output_to_editor : bool = false
 
 var dictionary_log : Dictionary[String, Variant]
@@ -17,7 +19,7 @@ func setup():
 func _process(delta: float) -> void:
 	pass
 
-func _on_auto_play_action(resource):
+func _on_instruction(action_resource : AutoPlaySuiteActionResource):
 	pass
 	
 func write_to_output(string):
@@ -36,12 +38,23 @@ func log_to_list_entry(key : String, data, also_to_output : bool):
 	if also_to_output:
 		write_to_output(data)
 
+static func get_logger_by_class_name(c_name : String) -> Object:
+	if !CreatedLoggers.has(c_name):
+		printerr("Tried to find a logger that hasn't been instantiated: ", c_name)
+		return null
+	return CreatedLoggers[c_name]
+
 static func instantiate_by_class_name(c_name: String) -> Object:
+	if CreatedLoggers.has(c_name):
+		printerr("Tried instancing two loggers of the class ", c_name, "! There can only be one per logger type.")
+		return
+	
 	for entry in ProjectSettings.get_global_class_list():
 		if entry["class"] == c_name:
 			var script: Script = load(entry["path"])
 			var instance = script.new()
 			if instance is AutoPlaySuiteLogger:
+				CreatedLoggers[c_name] = instance
 				return instance
 			else:
 				printerr("Tried instancing the class ", c_name, " but it was not present in the global class list!")
