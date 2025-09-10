@@ -29,8 +29,7 @@ func handle_debugger_message(data: Array):
 		arr.append(data[3])
 	elif target == "Set Data":
 		var key : String = data[2]
-		var arr : Array = dict.get_or_add(key, [])
-		arr.append(data[3])
+		dict[key] = data[3]
 	
 	print("Dict Size: ", log_dictionary.size())
 

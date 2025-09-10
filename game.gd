@@ -6,6 +6,9 @@ func _ready() -> void:
 		var path := OS.get_environment("AutoTestPath")
 		var test : AutoPlaySuiteTestResource = load(path)
 		_run_test.call_deferred(test)
+		var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.instantiate_by_class_name("AutoPlaySuiteDefaultLogger")
+		Engine.get_main_loop().root.add_child.call_deferred(logger)
+	
 
 func _run_test(test : AutoPlaySuiteTestResource):
 	print("Starting Test")

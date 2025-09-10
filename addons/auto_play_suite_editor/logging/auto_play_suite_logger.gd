@@ -30,11 +30,12 @@ func write_to_output(string):
 	EngineDebugger.send_message("aps:logging", [logger_name, "Output Stream", string])
 
 func write_as_entry(key : String, data):
-	dictionary_log[key] = data
+	EngineDebugger.send_message("aps:logging", [logger_name, "Set Data", key, data])
 
 func log_to_list_entry(key : String, data, also_to_output : bool):
 	var array : Array = dictionary_log.get_or_add(key, [])
 	array.append(data)
+	write_as_entry(key, array)
 	if also_to_output:
 		write_to_output(data)
 
