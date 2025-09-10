@@ -1,39 +1,18 @@
 == TODO RIGHT NOW ==
 
-TEST NAMES:
-	
-	X Add a test_name variable to the Test resource
-	
-	X Implement a field in the editor where this name can be added and changed
-	
-	X Refactor the saved logs to have the first level of the dictionary refer to test_name, with Logger then becoming the second entry
-	
-	X When a new test is created, a name is assigned randomly
-	
-	X Make it so the editor "presses" the new_test button after loading
-
 MULTIPLE TESTS:
 	
-	X Add a test_series_name variable to the TestSeries resource
+	Define an enum in the main editor that tracks what view is currently active in the "right pane". It contains Action and Log for now
 	
-	X Add a top panel called TestSeriesView which can display an arbitrary number of entries (buttons) connected to the loaded TestSeries
+	Add said enum to the Editor
 	
-	X At the top, there's a field for the Series Name
+	Make the main editor change the enum when switching between log view and action view
 	
-	X Make the Add New button add a new test to the TestSeries, and update the TestSeriesView to reflect this
+	Make the log show only the information from the currently viewed test
 	
-	X Make pressing the buttons switch which test is currently shown and loaded, and disabling the currently picked button (to show it is selected)
+	If the current test is changed, update the log view
 	
-	Make it so that changing a test name also changes the text on its button
-	
-	Create buttons for Save Series, Load Series and Remove Test From Series to be displayed to the right of the buttons panel
-	
-	Implement functionality for removing a test from a series
-	
-	Implement functionality for saving and loading TestSeries
-	
-	Implement functionality to run a full series, keeping the logs from all run tests
-		Refuse to run a series if any two upcoming test share the same name
+FIX BUG: Loading a test resource from file does not reflect in the Test Series
 
 === SPECIFICATION ==
 
