@@ -241,7 +241,13 @@ func current_test_name_changed(new_name : String):
 		if button.disabled:
 			button.text = new_name
 
-func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = true):
+func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = true) -> bool:
+	if test_resource.test_uid != "":
+		for test : AutoPlaySuiteTestResource in underlying_dictionary.values():
+			if test.test_uid == test_resource.test_uid:
+				printerr("This test is already a part of the series!")
+				return false
+	
 	var button := Button.new()
 	button.text = test_resource.test_name
 	test_button_list.append(button)
@@ -254,6 +260,8 @@ func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = 
 	if add_to_series:
 		current_test_series.paths_to_tests.append("")
 		_test_button_pressed(button)
+	
+	return true
 
 func _remove_test_button_pressed():
 	current_test_series.paths_to_tests.remove_at(current_selected_index)

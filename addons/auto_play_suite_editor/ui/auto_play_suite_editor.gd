@@ -273,6 +273,7 @@ func _save_test(path : String = ""):
 	
 	var uid : int = ResourceSaver.get_resource_id_for_path(path)
 	var uid_string : String = ResourceUID.id_to_text(uid)
+	current_test.test_uid = uid_string
 	test_series_view._update_path_to_current_test(uid_string)
 	signal_on_current_test_saved.emit()
 
@@ -321,11 +322,15 @@ func _load_test(path : String):
 		printerr("Selected file was not a Test Resource!")
 		return
 	
+	var new_test : AutoPlaySuiteTestResource = test.duplicate(true)
 	var uid_string : String = ResourceUID.id_to_text(ResourceSaver.get_resource_id_for_path(path))
-	
+	new_test.test_uid = uid_string
+	test_series_view.add_test(new_test)
 	test_series_view._update_path_to_current_test(uid_string)
 	
-	_set_current_test(test.duplicate(true))
+	#var uid_string : String = ResourceUID.id_to_text(ResourceSaver.get_resource_id_for_path(path))
+	#test_series_view._update_path_to_current_test(uid_string)
+	#_set_current_test(test.duplicate(true))
 
 func _file_dialog_canceled():
 	file_dialog = null
