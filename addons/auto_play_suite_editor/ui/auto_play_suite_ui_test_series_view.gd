@@ -59,7 +59,7 @@ func _ready() -> void:
 	
 	base_panel_container = PanelContainer.new()
 	base_panel_container.position = Vector2(0, 35) * ed_scale
-	base_panel_container.custom_minimum_size = Vector2(custom_minimum_size.x * size_ratio_for_panel, 50)
+	base_panel_container.custom_minimum_size = Vector2(custom_minimum_size.x * size_ratio_for_panel, 50) * ed_scale
 	add_child(base_panel_container)
 	var scroll_container := ScrollContainer.new()
 	base_panel_container.add_child(scroll_container)
@@ -219,6 +219,7 @@ func _set_current_series(new_series : AutoPlaySuiteTestSeriesResource):
 		if res == null:
 			printerr("Loaded Test in Test Series was not a test?!")
 		else:
+			print(res.test_uid)
 			add_test(res, false)
 	
 	if test_button_list.size() == 0:

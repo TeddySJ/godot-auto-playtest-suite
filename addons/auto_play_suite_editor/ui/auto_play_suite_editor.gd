@@ -268,12 +268,18 @@ func _save_test(path : String = ""):
 	
 	_sync_current_test_to_list()
 	
+	var create : bool = current_test.test_uid == ""
+	
 	current_test.take_over_path(path)
 	ResourceSaver.save(current_test, path)
 	
 	var uid : int = ResourceSaver.get_resource_id_for_path(path)
 	var uid_string : String = ResourceUID.id_to_text(uid)
 	current_test.test_uid = uid_string
+	
+	if create:
+		ResourceSaver.save(current_test, path) # Save again to store UID
+	
 	test_series_view._update_path_to_current_test(uid_string)
 	signal_on_current_test_saved.emit()
 
