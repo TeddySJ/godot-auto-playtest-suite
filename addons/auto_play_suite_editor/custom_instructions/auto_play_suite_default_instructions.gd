@@ -1,4 +1,5 @@
-extends Node
+extends RefCounted
+class_name AutoPlaySuiteInstructionSet_Default
 
 var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefinition] ={
 	&"[Debug] Print String" : AutoPlaySuiteInstructionDefinition.Create(_action_debug_print_string, "Prints a string"),

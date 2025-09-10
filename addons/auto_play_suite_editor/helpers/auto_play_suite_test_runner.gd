@@ -81,9 +81,7 @@ static func start_testing():
 static func _run_test(test : AutoPlaySuiteTestResource):
 	print("Starting Test")
 	
-	# TODO: Centralize location pointing to all scripts with custom definitions
-	var custom_instructions = load("res://addons/auto_play_suite_editor/custom_instructions/custom_auto_play_instructions.gd").new()
-	custom_instructions.hook_into_suite()
+	AutoPlaySuiteInstructionLoader.LoadAllInstructions()
 	
 	var test_runner := AutoPlaySuiteTestRunner.instance()
 	test_runner._start_test(test)
