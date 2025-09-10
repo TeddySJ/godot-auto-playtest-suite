@@ -30,6 +30,8 @@ var show_logs_button : Button
 
 var item_affected_by_popup : TreeItem
 
+var tests_to_run : Array[AutoPlaySuiteTestResource]
+
 var currently_setting_new_test : bool = false
 
 var current_context : CurrentContext = CurrentContext.Running
@@ -350,33 +352,48 @@ func _run_selected_action():
 		AutoPlaySuiteActionLibrary.possible_actions[action_view.underlying_action.action_id].on_enter.call(action_view.underlying_action)
 
 func _run_current_test():
-	if action_list.get_item_count() == 0:
+	if current_file_path == "":
+		printerr("Test must be saved to file before running it!")
 		return
-	
-	print("Running test with ", action_list.get_item_count(), " actions")
 	
 	_save_test()
 	
-	if current_file_path == "":
-		await signal_on_current_test_saved
-	
-	OS.set_environment("DoAutoTesting", "true")
-	OS.set_environment("AutoTestPath", current_file_path)
-	
 	logs.clear_logs()
+	
+	_setup_environment_for_testing()
+	
+	_run_single_test(current_test, _end_testing)
+	
 
-	EditorInterface.play_main_scene()
-	await _wait_until_game_exits()
-	
-	logs.print_all_logs()
-	
+func _end_testing():
 	logs_view.set_data(logs.log_dictionary)
 	_show_logger()
 	
+	_restore_environment_after_testing()
+
+func _setup_environment_for_testing():
+	OS.set_environment("DoAutoTesting", "true")
+
+func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finished : Callable):
+	_set_current_test_file_path_environment(test_series_view._get_test_uid_path(test_resource))
+	
+	EditorInterface.play_main_scene()
+	await _wait_until_game_exits()
+	
+	call_on_finished.call()
+
+func _set_current_test_file_path_environment(path : String):
+	OS.set_environment("AutoTestPath", path)
+
+func _restore_environment_after_testing():
 	OS.set_environment("DoAutoTesting", "")
 	OS.set_environment("AutoTestPath", "")
 
 func _run_all_tests():
+	tests_to_run.clear()
+	tests_to_run.append_array(test_series_view._get_all_tests_in_order())
+
+func _run_next_test():
 	pass
 
 func _wait_until_game_exits() -> void:
