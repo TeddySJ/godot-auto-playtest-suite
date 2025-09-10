@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="AutoPlaySuiteTestSeriesResource" load_steps=2 format=3 uid="uid://bw1ivm1qu1pgk"]
+
+[ext_resource type="Script" uid="uid://cgv75f3xcows" path="res://addons/auto_play_suite_editor/resource_definitions/auto_play_suite_test_series_resource.gd" id="1_0kx3b"]
+
+[resource]
+script = ExtResource("1_0kx3b")
+test_series_name = "The Game"
+paths_to_tests = Array[String](["uid://2n2ewnuiafo4", "uid://gb1ho367v6mt", "uid://cvvelucg4n1h0"])
+number_of_runs_per_test = Array[int]([])

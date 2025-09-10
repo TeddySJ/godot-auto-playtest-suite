@@ -1,0 +1,73 @@
+[gd_resource type="Resource" script_class="AutoPlaySuiteTestResource" load_steps=12 format=3 uid="uid://cvvelucg4n1h0"]
+
+[ext_resource type="Script" uid="uid://ikormuqgcg8x" path="res://addons/auto_play_suite_editor/resource_definitions/auto_play_suite_action_resource.gd" id="1_8kl4e"]
+[ext_resource type="Script" uid="uid://06aowi87ma76" path="res://addons/auto_play_suite_editor/resource_definitions/auto_play_suite_test_resource.gd" id="2_op0qv"]
+
+[sub_resource type="Resource" id="Resource_vpp7o"]
+script = ExtResource("1_8kl4e")
+action_id = &"[Logging] Start Logger"
+float_var = 0.0
+string_var = "AutoPlaySuiteCustomLogger_AutoLog"
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_ol5io"]
+script = ExtResource("1_8kl4e")
+action_id = &"[Logging] Start Logger"
+float_var = 0.5
+string_var = "AutoPlaySuiteCustomLogger_Test"
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_qyjdx"]
+script = ExtResource("1_8kl4e")
+action_id = "[Game] Set Time Scale"
+float_var = 5.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_8kl4e"]
+script = ExtResource("1_8kl4e")
+action_id = &"[Game] Make Love"
+float_var = 0.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_op0qv"]
+script = ExtResource("1_8kl4e")
+action_id = &"[Wait] Wait X Seconds"
+float_var = 2.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_p15e2"]
+script = ExtResource("1_8kl4e")
+action_id = &"[Game] Make Love"
+float_var = 0.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_gwncs"]
+script = ExtResource("1_8kl4e")
+action_id = &"[Wait] Wait X Seconds"
+float_var = 2.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_bmero"]
+script = ExtResource("1_8kl4e")
+action_id = &"[Game] Exit On All Dead Or 10 Alive"
+float_var = 2.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_d0kfq"]
+script = ExtResource("1_8kl4e")
+action_id = "[Game] Play Forever, K<X, L>X"
+float_var = 0.5
+string_var = ""
+extra_vars = Array[String]([])
+
+[resource]
+script = ExtResource("2_op0qv")
+test_name = "GameOfChaos"
+test_uid = "uid://cvvelucg4n1h0"
+actions = Array[ExtResource("1_8kl4e")]([SubResource("Resource_vpp7o"), SubResource("Resource_ol5io"), SubResource("Resource_qyjdx"), SubResource("Resource_8kl4e"), SubResource("Resource_op0qv"), SubResource("Resource_p15e2"), SubResource("Resource_gwncs"), SubResource("Resource_bmero"), SubResource("Resource_d0kfq")])

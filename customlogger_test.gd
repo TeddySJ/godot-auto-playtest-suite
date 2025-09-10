@@ -1,22 +1,10 @@
 extends AutoPlaySuiteLogger
-class_name AutoPlaySuiteCustomLogger_Test
+class_name AutoPlaySuiteCustomLogger_AutoLog
 
-var time_passed : float = 0
+static var Singleton : AutoPlaySuiteCustomLogger_AutoLog = null
 
 func setup():
+	Singleton = self
 	forward_output_to_editor = true
-	logger_name = "Great Logger of Seconds"
-	write_to_output("Created a Test Logger!")
-
-func _process(delta: float) -> void:
-	time_passed += delta
-	if time_passed >= 1:
-		write_to_output("A second has passed!")
-		time_passed -= 1
-
-func _on_instruction(action_resource : AutoPlaySuiteActionResource):
-	if action_resource.float_var == 0:
-		write_to_output("It was like this!")
-	else:
-		write_to_output("It was like that!")
-	
+	logger_name = "Autoplay Log"
+	write_to_output("Created Logger!")

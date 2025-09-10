@@ -4,8 +4,8 @@ class_name AutoPlaySuiteInstructionSet_Default
 var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefinition] ={
 	&"[Debug] Print String" : AutoPlaySuiteInstructionDefinition.Create(_action_debug_print_string, "Prints a string"),
 	&"[Debug] Print Float" : AutoPlaySuiteInstructionDefinition.Create(_action_debug_print_float, "Prints a float"),
-	&"[Debug] Print Hi X Seconds" : AutoPlaySuiteInstructionDefinition.Create(_action_print_hi, "Prints 'Hi' every frame for [float] seconds", _action_process_print_hi),
-	&"[Debug] Quit" : AutoPlaySuiteInstructionDefinition.Create(_action_exit_game, "Exits the game"),
+	&"[Engine] Quit" : AutoPlaySuiteInstructionDefinition.Create(_action_exit_game, "Exits the game"),
+	&"[Wait] Wait X Seconds" : AutoPlaySuiteInstructionDefinition.Create(_wait_x_seconds, "Waits for [float] seconds"),
 	&"[Logging] Start Logger" : AutoPlaySuiteInstructionDefinition.Create(_start_logger, "Instances a logger of [string] class"),
 	&"[Logging] Instruct Logger" : AutoPlaySuiteInstructionDefinition.Create(_instruct_logger, "Instructs an existing logger of [string] class"),
 }
@@ -54,5 +54,8 @@ func _instruct_logger(arguments : AutoPlaySuiteActionResource):
 	
 	logger._on_instruction(arguments)
 
+func _wait_x_seconds(arguments : AutoPlaySuiteActionResource):
+	await Engine.get_main_loop().create_timer(arguments.float_var).timeout
+	arguments.finished = true
 
 #endregion

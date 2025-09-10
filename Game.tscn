@@ -3,16 +3,43 @@
 [ext_resource type="Script" uid="uid://bfm0pjnta3cg0" path="res://game.gd" id="1_wbfu4"]
 [ext_resource type="Script" uid="uid://b7jw1jcgb3x5r" path="res://addons/auto_play_suite_editor/helpers/auto_play_suite_hook_node.gd" id="2_xkndl"]
 
-[node name="Game" type="Node2D"]
+[node name="Game" type="Node2D" node_paths=PackedStringArray("labels")]
 script = ExtResource("1_wbfu4")
+labels = [NodePath("AutoPlaySuiteHookNode/Control/Label1"), NodePath("AutoPlaySuiteHookNode/Control/Label2"), NodePath("AutoPlaySuiteHookNode/Control/Label3")]
 
 [node name="AutoPlaySuiteHookNode" type="Node" parent="."]
 script = ExtResource("2_xkndl")
 metadata/_custom_type_script = "uid://b7jw1jcgb3x5r"
 
-[node name="Label" type="Label" parent="."]
-offset_left = 141.0
-offset_top = 101.0
-offset_right = 253.0
-offset_bottom = 163.0
+[node name="Control" type="Control" parent="AutoPlaySuiteHookNode"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+scale = Vector2(2, 2)
+
+[node name="Label1" type="Label" parent="AutoPlaySuiteHookNode/Control"]
+layout_mode = 0
+offset_left = 29.5
+offset_top = 66.0
+offset_right = 735.5
+offset_bottom = 91.0
+text = "Hallå!"
+
+[node name="Label2" type="Label" parent="AutoPlaySuiteHookNode/Control"]
+modulate = Color(1, 1, 1, 0.666667)
+layout_mode = 0
+offset_left = 29.5
+offset_top = 46.0
+offset_right = 735.5
+offset_bottom = 71.0
+text = "Hallå!"
+
+[node name="Label3" type="Label" parent="AutoPlaySuiteHookNode/Control"]
+modulate = Color(1, 1, 1, 0.384314)
+layout_mode = 0
+offset_left = 29.5
+offset_top = 27.0
+offset_right = 735.5
+offset_bottom = 52.0
 text = "Hallå!"

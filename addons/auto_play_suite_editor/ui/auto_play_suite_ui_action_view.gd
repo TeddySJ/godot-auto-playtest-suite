@@ -46,6 +46,7 @@ func _ready() -> void:
 	float_var_spinbox = SpinBox.new()
 	float_var_spinbox.min_value = -99999999
 	float_var_spinbox.max_value = 99999999
+	float_var_spinbox.step = 0.01
 	float_var_spinbox.position = float_var_pos + Vector2(100, -4)  * ed_scale
 	float_var_spinbox.custom_minimum_size.x = 200 * ed_scale
 	float_var_spinbox.value_changed.connect(_float_var_changed)

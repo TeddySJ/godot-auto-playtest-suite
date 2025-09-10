@@ -1,41 +1,10 @@
 == TODO RIGHT NOW ==
 
-FIX BUG: Loading a test resource from file does not reflect in the Test Series
+A CLEAN-UP PASS!:
+	
+	Figure this out...
 
-LOGGING:
-	
-	Implement and test functionality of sending instructions to a Logger
-	
-	Create a Default Logger that is started automatically, but write nothing by default
-	
 
-CUSTOM INSTRUCTIONS REFACTOR:
-	
-	Make Custom Instructions be added by looking for classes with AutoTestSuiteCustomInstructionSet and then calling an "add_instructions" function on it
-
-GAME TESTING:
-	
-	Create a very simple "game" that behaves somewhat unpredictably:
-		
-		"Kill or multiply" that starts with X people, and a person has two possible actions: kill someone, or procreate with someone
-		
-		The game lasts X seconds
-		
-	
-	Create some custom instructions for the game:
-		
-		Every second, pick one person to do a random action
-	
-	Create a Logger for the game:
-		
-		Connect signals to the logger so it can log the goings-on
-	
-	
-	
-	
-	
-
-	
 === SPECIFICATION ==
 
 MAIN ENGINE:

@@ -1,0 +1,80 @@
+[gd_resource type="Resource" script_class="AutoPlaySuiteTestResource" load_steps=13 format=3 uid="uid://2n2ewnuiafo4"]
+
+[ext_resource type="Script" uid="uid://ikormuqgcg8x" path="res://addons/auto_play_suite_editor/resource_definitions/auto_play_suite_action_resource.gd" id="1_a4qui"]
+[ext_resource type="Script" uid="uid://06aowi87ma76" path="res://addons/auto_play_suite_editor/resource_definitions/auto_play_suite_test_resource.gd" id="2_osok2"]
+
+[sub_resource type="Resource" id="Resource_a4qui"]
+script = ExtResource("1_a4qui")
+action_id = &"[Logging] Start Logger"
+float_var = 0.0
+string_var = "AutoPlaySuiteCustomLogger_AutoLog"
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_osok2"]
+script = ExtResource("1_a4qui")
+action_id = &"[Logging] Start Logger"
+float_var = 0.0
+string_var = "AutoPlaySuiteCustomLogger_Test"
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_75358"]
+script = ExtResource("1_a4qui")
+action_id = &"[Wait] Wait X Seconds"
+float_var = 1.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_krk11"]
+script = ExtResource("1_a4qui")
+action_id = &"[Game] Kill"
+float_var = 0.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_as3gh"]
+script = ExtResource("1_a4qui")
+action_id = &"[Wait] Wait X Seconds"
+float_var = 2.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_2hhs0"]
+script = ExtResource("1_a4qui")
+action_id = &"[Game] Kill"
+float_var = 0.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_qii65"]
+script = ExtResource("1_a4qui")
+action_id = &"[Wait] Wait X Seconds"
+float_var = 3.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_efi2s"]
+script = ExtResource("1_a4qui")
+action_id = &"[Game] Kill"
+float_var = 0.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_tmp1o"]
+script = ExtResource("1_a4qui")
+action_id = &"[Wait] Wait X Seconds"
+float_var = 3.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[sub_resource type="Resource" id="Resource_uqvfo"]
+script = ExtResource("1_a4qui")
+action_id = &"[Engine] Quit"
+float_var = 0.0
+string_var = ""
+extra_vars = Array[String]([])
+
+[resource]
+script = ExtResource("2_osok2")
+test_name = "GameOfDeath"
+test_uid = "uid://2n2ewnuiafo4"
+actions = Array[ExtResource("1_a4qui")]([SubResource("Resource_a4qui"), SubResource("Resource_osok2"), SubResource("Resource_75358"), SubResource("Resource_krk11"), SubResource("Resource_as3gh"), SubResource("Resource_2hhs0"), SubResource("Resource_qii65"), SubResource("Resource_efi2s"), SubResource("Resource_tmp1o"), SubResource("Resource_uqvfo")])
