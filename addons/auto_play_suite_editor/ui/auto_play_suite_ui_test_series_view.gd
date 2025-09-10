@@ -258,6 +258,9 @@ func _remove_test_button_pressed():
 	
 	_test_button_pressed(test_button_list[0])
 
+func _on_all_tests_removed():
+	print("All tests removed!")
+
 func _on_run_current_test_button_pressed():
 	signal_on_run_current_test_pressed.emit()
 
@@ -267,21 +270,35 @@ func _on_run_all_tests_button_pressed():
 			printerr("One or more of the tests in the series has not been saved to disk yet!")
 			return
 	
+	_save_all_tests_in_series()
+	
 	signal_on_run_all_tests_pressed.emit()
 
-func _on_all_tests_removed():
-	print("All tests removed!")
+func _save_all_tests_in_series():
+	var origin_index : int = current_selected_index
+	for button in test_button_list:
+		_change_to_test(underlying_dictionary[button])
+		AutoPlaySuite._get_plugin_singleton()._save_test()
+	_test_button_pressed(test_button_list[origin_index])
+
+func _get_all_tests_in_order() -> Array[AutoPlaySuiteTestResource]:
+	var ret : Array[AutoPlaySuiteTestResource] = []
+	for button in run_all_tests_button:
+		ret.append(underlying_dictionary[button])
+	return ret
 
 func _test_button_pressed(button_pressed : Button):
 	for button in test_button_list:
 		button.disabled = false
 	current_selected_index = test_button_list.find(button_pressed)
 	button_pressed.disabled = true
-	signal_on_test_changed.emit(underlying_dictionary[button_pressed])
+	_change_to_test(underlying_dictionary[button_pressed])
+
+func _change_to_test(test_resource : AutoPlaySuiteTestResource):
+	signal_on_test_changed.emit(test_resource)
 
 func _update_path_to_current_test(new_path : String):
 	current_test_series.paths_to_tests[current_selected_index] = new_path
-
 
 func clear():
 	for button in test_button_list:
