@@ -5,7 +5,7 @@ var time_passed : float = 0
 
 func setup():
 	forward_output_to_editor = true
-	logger_name = "Test"
+	logger_name = "Great Logger of Seconds"
 	write_to_output("Created a Test Logger!")
 
 func _process(delta: float) -> void:

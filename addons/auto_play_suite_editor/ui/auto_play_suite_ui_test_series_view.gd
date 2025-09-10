@@ -10,6 +10,10 @@ var base_panel_container : PanelContainer
 var hbox_container : HBoxContainer
 var test_button_list : Array[Button]
 
+var run_current_test_button : Button
+var run_all_tests_button : Button
+
+
 var new_series_button : Button
 var load_series_button : Button
 var save_series_button : Button
@@ -24,6 +28,8 @@ var current_test_series : AutoPlaySuiteTestSeriesResource
 signal signal_on_current_test_series_saved
 signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
 signal signal_on_new_series
+signal signal_on_run_current_test_pressed
+signal signal_on_run_all_tests_pressed
 
 func _ready() -> void:
 	if current_test_series == null:
@@ -59,6 +65,20 @@ func _ready() -> void:
 	base_panel_container.add_child(scroll_container)
 	hbox_container = HBoxContainer.new()
 	scroll_container.add_child(hbox_container)
+	
+	var run_test_button_start_pos : Vector2 = base_panel_container.position + Vector2(base_panel_container.custom_minimum_size.x, 0)
+	
+	run_current_test_button = Button.new()
+	run_current_test_button.text = "Run Current Test"
+	run_current_test_button.position = run_test_button_start_pos + Vector2(10, 10) * ed_scale
+	run_current_test_button.pressed.connect(_on_run_current_test_button_pressed)
+	add_child(run_current_test_button)
+	
+	run_all_tests_button = Button.new()
+	run_all_tests_button.text = "Run All Tests"
+	run_all_tests_button.position = run_test_button_start_pos + Vector2(170, 10) * ed_scale
+	run_all_tests_button.pressed.connect(_on_run_all_tests_button_pressed)
+	add_child(run_all_tests_button)
 	
 	var button_start_pos : Vector2 = test_series_name_input.position + Vector2(test_series_name_input.custom_minimum_size.x, 0)
 	
@@ -237,6 +257,17 @@ func _remove_test_button_pressed():
 		return
 	
 	_test_button_pressed(test_button_list[0])
+
+func _on_run_current_test_button_pressed():
+	signal_on_run_current_test_pressed.emit()
+
+func _on_run_all_tests_button_pressed():
+	for uid in current_test_series.paths_to_tests:
+		if uid == "":
+			printerr("One or more of the tests in the series has not been saved to disk yet!")
+			return
+	
+	signal_on_run_all_tests_pressed.emit()
 
 func _on_all_tests_removed():
 	print("All tests removed!")

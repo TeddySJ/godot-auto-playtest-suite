@@ -22,8 +22,6 @@ var file_dialog : FileDialog
 
 var test_name_field : LineEdit
 
-var run_test_button : Button
-var run_all_button : Button
 var save_test_button : Button
 var save_test_as_button : Button
 var load_test_button : Button
@@ -107,6 +105,9 @@ func setup_ui() -> void:
 	
 	test_series_view.position = Vector2(100,10) * ed_scale
 	
+	test_series_view.signal_on_run_current_test_pressed.connect(_run_current_test)
+	test_series_view.signal_on_run_all_tests_pressed.connect(_run_all_tests)
+	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
 	action_list.signal_on_list_changed.connect(_sync_current_test_to_list)
@@ -142,20 +143,12 @@ func setup_ui() -> void:
 	test_name_label.custom_minimum_size.x = 200 * ed_scale
 	add_child(test_name_label)
 	
-	run_test_button = Button.new()
-	run_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 50)  * ed_scale
-	run_test_button.text = "Run Test"
-	add_child(run_test_button)
-	run_test_button.pressed.connect(_run_current_test)
+	#run_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 50)  * ed_scale
 	
-	run_all_button = Button.new()
-	run_all_button.position = run_test_button.position + Vector2(100, 0) * ed_scale
-	run_all_button.text = "Run All"
-	add_child(run_all_button)
-	run_all_button.pressed.connect(_run_all_tests)
+	#run_all_button.position = run_test_button.position + Vector2(100, 0) * ed_scale
 
 	save_test_button = Button.new()
-	save_test_button.position = Vector2(0, run_all_button.position.y) + Vector2(100, 50)  * ed_scale
+	save_test_button.position = test_name_field.position + Vector2(0, 50)  * ed_scale
 	save_test_button.text = "Save Test"
 	add_child(save_test_button)
 	save_test_button.pressed.connect(_save_test)
