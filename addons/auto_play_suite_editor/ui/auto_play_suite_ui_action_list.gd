@@ -53,13 +53,13 @@ func _create_right_click_thing():
 
 func _on_action_list_popup_pressed(id):
 	if id == 0: # Add First Item
-		add_and_bind_item("New Entry", AutoPlaySuiteActionResource.CreateEmpty(), 0)
+		_add_default_entry(0)
 	elif id == 1 || id == 2: # Add above / below
 		if last_selected == null:
 			return
 		
 		var current_pos : int = last_selected.get_index()
-		add_and_bind_item("New Entry", AutoPlaySuiteActionResource.CreateEmpty(), current_pos + (1 if id == 2 else 0))
+		_add_default_entry(current_pos + (1 if id == 2 else 0))
 	elif id == 3: # Delete entry
 		if last_selected == null:
 			return
@@ -70,6 +70,10 @@ func _on_action_list_popup_pressed(id):
 		var selection : Array[TreeItem] = get_all_selected()
 		for item in selection:
 			remove_item(item)
+
+func _add_default_entry(at_index : int):
+	at_index = clamp(at_index, 0, get_item_count())
+	add_and_bind_item("New Entry", AutoPlaySuiteActionResource.CreateEmpty(), at_index)
 
 func handle_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton && event.is_pressed():
