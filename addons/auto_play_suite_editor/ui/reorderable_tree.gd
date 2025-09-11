@@ -105,16 +105,27 @@ func _drop_data(at_position: Vector2, data):
 		return
 	var section := get_drop_section_at_position(at_position) # -1 = above, 1 = below
 	var all_selected = get_all_selected()
-	var first_item = all_selected.pop_front()
+	
+	var index_of_to = get_index_of_tree_item(to) + 1 if section > 0 else 0
+	
+	for item in all_selected:
+		if item == to:
+			return
+		if get_index_of_tree_item(item) == index_of_to:
+			return
+	
+	var first_item = all_selected[0]
+	
 	if section == -1:
 		first_item.move_before(to)
 	elif section == 1:
 		first_item.move_after(to)
 	
-	for item in all_selected:
-		item.move_after(first_item)
+	for n in all_selected.size():
+		if n == 0:
+			continue
+		all_selected[n].move_after(all_selected[n-1])
 	
-	all_selected.erase(first_item)
 	signal_on_item_order_changed.emit()
 
 func _on_cell_selected() -> void:
