@@ -344,6 +344,7 @@ func _new_test():
 	current_test.test_name = test_name
 	action_list.empty_list()
 	test_series_view.add_test(current_test)
+	action_list.add_default_entry(0)
 	
 
 func _on_new_test_series():
