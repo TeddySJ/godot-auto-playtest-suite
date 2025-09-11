@@ -23,7 +23,7 @@ func add_and_bind_item(text : String, value, at_index : int = -1):
 func remove_item(to_remove : TreeItem):
 	backing_dictionary.erase(to_remove)
 	root.remove_child(to_remove)
-	signal_on_item_added_and_bound.emit()
+	signal_on_item_removed.emit()
 	
 func remove_item_at_index(index : int):
 	remove_item(root.get_child(index))
@@ -58,6 +58,20 @@ func get_all_selected() -> Array[TreeItem]:
 		current = get_next_selected(current)
 	
 	return ret
+
+func get_index_of_tree_item(tree_item) -> int:
+	var all_tree_items := root.get_children()
+	for n in all_tree_items.size():
+		if all_tree_items[n] == tree_item:
+			return n
+	return -1
+
+func get_index_of_backing_item(backing_item) -> int:
+	var all_tree_items := root.get_children()
+	for n in all_tree_items.size():
+		if backing_dictionary[all_tree_items[n]] == backing_item:
+			return n
+	return -1
 
 func get_all_items() -> Array:
 	var arr := root.get_children()

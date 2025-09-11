@@ -14,9 +14,7 @@ enum PopupChoice
 	AddEntry_Above,
 	AddEntry_Below,
 	DuplicateEntries = 20,
-	#DuplicateEntries,
 	DeleteEntries = 30,
-	#DeleteEntries,
 	Cut = 40,
 	Copy,
 	Paste,
@@ -25,7 +23,9 @@ enum PopupChoice
 
 var popup_choice_to_callable : Dictionary[int, Callable] = { 
 	PopupChoice.AddEntry : _add_entry, PopupChoice.AddEntry_Above : _add_entry_above_or_below.bind(false), PopupChoice.AddEntry_Below : _add_entry_above_or_below.bind(true),
-	PopupChoice.DuplicateEntries : _duplicate_entries, PopupChoice.DeleteEntries : _delete_entries, PopupChoice.Cut : _cut_entries, PopupChoice.Copy : _copy_entries,PopupChoice.Paste : _paste_entries,  }
+	PopupChoice.DuplicateEntries : _duplicate_entries, PopupChoice.DeleteEntries : _delete_entries, 
+	PopupChoice.Cut : _cut_entries, PopupChoice.Copy : _copy_entries,PopupChoice.Paste : _paste_entries,  
+	}
 
 func _ready() -> void:
 	super._ready()
@@ -107,7 +107,21 @@ func _add_entry_above_or_below(is_below : bool):
 	add_default_entry(current_pos + (1 if is_below else 0))
 
 func _duplicate_entries():
-	pass
+	var selection : Array[TreeItem] = get_all_selected()
+	
+	if selection.size() == 0:
+		return
+	
+	var last_index : int = get_index_of_tree_item(selection.back())
+	#var items_to_duplicate : Array[AutoPlaySuiteActionResource]
+	var sel_size : int = selection.size()
+	for n in sel_size:
+		#items_to_duplicate.append(backing_dictionary[tree_item])
+		var tree_item := selection[sel_size - n - 1]
+		var to_duplicate : AutoPlaySuiteActionResource = backing_dictionary[tree_item]
+		add_and_bind_item(tree_item.get_text(0), to_duplicate.duplicate(true), last_index + 1)
+	
+	signal_on_item_order_changed.emit()
 
 func _delete_entries():
 	var selection : Array[TreeItem] = get_all_selected()
