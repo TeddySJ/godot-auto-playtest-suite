@@ -3,6 +3,8 @@ class_name AutoPlaySuiteActionList
 
 signal signal_on_list_changed
 
+var mouse_is_over : bool = false
+
 func _ready() -> void:
 	super._ready()
 	focus_mode = FOCUS_NONE
@@ -12,6 +14,11 @@ func _ready() -> void:
 	signal_on_item_added_and_bound.connect(_emit_list_changed)
 	signal_on_item_order_changed.connect(_emit_list_changed)
 	signal_on_item_removed.connect(_emit_list_changed)
+	mouse_entered.connect(set_mouse_over.bind(true))
+	mouse_exited.connect(set_mouse_over.bind(false))
+
+func set_mouse_over(is_over):
+	mouse_is_over = is_over
 
 func empty_list():
 	clear()
@@ -49,7 +56,8 @@ func _create_right_click_thing():
 	popup.id_pressed.connect(_on_action_list_popup_pressed)
 	add_child(popup)
 	popup.position = get_global_mouse_position()
-	popup.show()
+	
+	AutoPlaySuite.set_and_show_popup(popup)
 
 func _on_action_list_popup_pressed(id):
 	if id == 0: # Add First Item
@@ -76,6 +84,12 @@ func _add_default_entry(at_index : int):
 	add_and_bind_item("New Entry", AutoPlaySuiteActionResource.CreateEmpty(), at_index)
 
 func handle_input(event: InputEvent) -> void:
+	# Keyboard input
+	
+	# Mouse input
+	if !mouse_is_over:
+		return
+	
 	if event is InputEventMouseButton && event.is_pressed():
 		if event.button_index == MOUSE_BUTTON_RIGHT:
 			_create_right_click_thing()

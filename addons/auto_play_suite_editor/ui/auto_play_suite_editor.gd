@@ -6,6 +6,8 @@ static var Singleton : AutoPlaySuite:
 	get:
 		return _get_plugin_singleton()
 
+static var shared_popup : Popup
+
 enum RightPaneView
 {
 	Hidden = 0,
@@ -61,6 +63,14 @@ enum CurrentContext
 }
 
 signal signal_on_current_test_saved
+
+static func set_and_show_popup(new_popup : Popup):
+	if shared_popup != null:
+		shared_popup.hide()
+		shared_popup = null
+	shared_popup = new_popup
+	shared_popup.show()
+	
 
 func _enter_tree() -> void:
 	pass
@@ -434,7 +444,6 @@ func _run_all_tests():
 	
 	_prepare_for_testing()
 	_run_next_test()
-	
 
 func _run_next_test():
 	if tests_to_run.size() == 0:
