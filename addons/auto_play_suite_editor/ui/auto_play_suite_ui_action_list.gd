@@ -5,21 +5,27 @@ signal signal_on_list_changed
 
 var mouse_is_over : bool = false
 
+var copied_buffer : Array[AutoPlaySuiteActionResource]
+
 enum PopupChoice
 {
 	NULL = 0,
 	AddEntry = 10,
 	AddEntry_Above,
 	AddEntry_Below,
-	DuplicateEntry = 20,
-	DuplicateEntries,
-	DeleteEntry = 30,
-	DeleteEntries,
+	DuplicateEntries = 20,
+	#DuplicateEntries,
+	DeleteEntries = 30,
+	#DeleteEntries,
 	Cut = 40,
 	Copy,
 	Paste,
 	
 }
+
+var popup_choice_to_callable : Dictionary[int, Callable] = { 
+	PopupChoice.AddEntry : _add_entry, PopupChoice.AddEntry_Above : _add_entry_above_or_below.bind(false), PopupChoice.AddEntry_Below : _add_entry_above_or_below.bind(true),
+	PopupChoice.DuplicateEntries : _duplicate_entries, PopupChoice.DeleteEntries : _delete_entries, PopupChoice.Cut : _cut_entries, PopupChoice.Copy : _copy_entries,PopupChoice.Paste : _paste_entries,  }
 
 func _ready() -> void:
 	super._ready()
@@ -65,9 +71,9 @@ func _create_right_click_thing():
 	if item_count == 1:
 		popup.add_item("Add Entry Above", PopupChoice.AddEntry_Above)
 		popup.add_item("Add Entry Below", PopupChoice.AddEntry_Below)
-		popup.add_item("Duplicate Entry", PopupChoice.DuplicateEntry)
+		popup.add_item("Duplicate Entry", PopupChoice.DuplicateEntries)
 		popup.add_separator()
-		popup.add_item("Delete Entry", PopupChoice.DeleteEntry)
+		popup.add_item("Delete Entry", PopupChoice.DeleteEntries)
 		popup.add_separator()
 		popup.add_item("Cut", PopupChoice.Cut)
 		popup.add_item("Copy", PopupChoice.Copy)
@@ -88,24 +94,34 @@ func _create_right_click_thing():
 	AutoPlaySuite.set_and_show_popup(popup)
 
 func _on_action_list_popup_pressed(id):
-	if id == PopupChoice.AddEntry:
-		add_default_entry(0)
-	elif id == PopupChoice.AddEntry_Above || id == PopupChoice.AddEntry_Below:
-		if last_selected == null:
-			return
-		
-		var current_pos : int = last_selected.get_index()
-		add_default_entry(current_pos + (1 if id == PopupChoice.AddEntry_Below else 0))
-	elif id == PopupChoice.DeleteEntry: 
-		if last_selected == null:
-			return
-		
-		remove_item(last_selected)
-		last_selected = null
-	elif id == PopupChoice.DeleteEntries:
-		var selection : Array[TreeItem] = get_all_selected()
-		for item in selection:
-			remove_item(item)
+	popup_choice_to_callable[id].call()
+
+func _add_entry():
+	add_default_entry(0)
+
+func _add_entry_above_or_below(is_below : bool):
+	if last_selected == null:
+		return
+
+	var current_pos : int = last_selected.get_index()
+	add_default_entry(current_pos + (1 if is_below else 0))
+
+func _duplicate_entries():
+	pass
+
+func _delete_entries():
+	var selection : Array[TreeItem] = get_all_selected()
+	for item in selection:
+		remove_item(item)
+
+func _cut_entries():
+	pass
+
+func _copy_entries():
+	pass
+
+func _paste_entries():
+	pass
 
 func add_default_entry(at_index : int):
 	at_index = clamp(at_index, 0, get_item_count())
