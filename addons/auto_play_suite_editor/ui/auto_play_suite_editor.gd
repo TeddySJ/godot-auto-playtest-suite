@@ -34,8 +34,6 @@ var test_name_field : LineEdit
 
 var save_test_button : Button
 var save_test_as_button : Button
-var load_test_button : Button
-var new_test_button : Button
 var show_logs_button : Button
 
 var item_affected_by_popup : TreeItem
@@ -123,6 +121,8 @@ func setup_ui() -> void:
 	
 	test_series_view.signal_on_run_current_test_pressed.connect(_run_current_test)
 	test_series_view.signal_on_run_all_tests_pressed.connect(_run_all_tests)
+	test_series_view.signal_on_new_test_button_pressed.connect(_new_test)
+	test_series_view.signal_on_load_test_button_pressed.connect(_load_button_pressed)
 	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
@@ -175,29 +175,11 @@ func setup_ui() -> void:
 	add_child(save_test_as_button)
 	save_test_as_button.pressed.connect(_save_test_as)
 	
-	load_test_button = Button.new()
-	load_test_button.position = save_test_button.position + Vector2(0, 50) * ed_scale
-	load_test_button.text = "Load Test"
-	add_child(load_test_button)
-	load_test_button.pressed.connect(_load_button_pressed)
-
-	new_test_button = Button.new()
-	new_test_button.position = load_test_button.position + Vector2(0, 50) * ed_scale
-	new_test_button.text = "New Test"
-	add_child(new_test_button)
-	new_test_button.pressed.connect(_new_test)
-	
 	show_logs_button = Button.new()
-	show_logs_button.position = load_test_button.position + Vector2(100, 50) * ed_scale
+	show_logs_button.position = save_test_button.position + Vector2(100, 50) * ed_scale
 	show_logs_button.text = "Show Logs"
 	add_child(show_logs_button)
 	show_logs_button.pressed.connect(_show_logger)
-	
-	var debug_fill_button = Button.new()
-	debug_fill_button.position = new_test_button.position + Vector2(-100, 0) * ed_scale
-	debug_fill_button.text = "Debug Fill"
-	add_child(debug_fill_button)
-	debug_fill_button.pressed.connect(_debug_fill)
 	
 	logs_view = AutoPlaySuiteUiLogViewer.new()
 	add_child(logs_view)
@@ -214,7 +196,7 @@ func setup_ui() -> void:
 	if is_in_editor:
 		_setup_in_editor()
 	
-	new_test_button.pressed.emit()
+	_new_test()
 
 func _setup_in_single_scene():
 	init_plugin()

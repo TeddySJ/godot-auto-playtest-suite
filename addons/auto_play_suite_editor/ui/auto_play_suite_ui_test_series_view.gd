@@ -10,15 +10,17 @@ var base_panel_container : PanelContainer
 var hbox_container : HBoxContainer
 var test_button_list : Array[Button]
 
-var run_current_test_button : Button
-var run_all_tests_button : Button
-
-
 var new_series_button : Button
 var load_series_button : Button
 var save_series_button : Button
 var save_series_as_button : Button
 var remove_test_button : Button
+
+var load_test_button : Button
+var new_test_button : Button
+
+var run_current_test_button : Button
+var run_all_tests_button : Button
 
 var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 
@@ -30,6 +32,9 @@ signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
 signal signal_on_new_series
 signal signal_on_run_current_test_pressed
 signal signal_on_run_all_tests_pressed
+
+signal signal_on_new_test_button_pressed
+signal signal_on_load_test_button_pressed
 
 func _ready() -> void:
 	if current_test_series == null:
@@ -111,6 +116,19 @@ func _ready() -> void:
 	remove_test_button.position = button_start_pos + Vector2(470, 0) * ed_scale
 	remove_test_button.pressed.connect(_remove_test_button_pressed)
 	add_child(remove_test_button)
+	
+	load_test_button = Button.new()
+	load_test_button.position = Vector2(-90, 40) * ed_scale
+	load_test_button.text = "Load Test"
+	add_child(load_test_button)
+	load_test_button.pressed.connect(signal_on_load_test_button_pressed.emit)
+
+	new_test_button = Button.new()
+	new_test_button.position = load_test_button.position + Vector2(0, 50) * ed_scale
+	new_test_button.text = "New Test"
+	add_child(new_test_button)
+	new_test_button.pressed.connect(signal_on_new_test_button_pressed.emit)
+	
 
 func _new_series_button_pressed():
 	clear()
