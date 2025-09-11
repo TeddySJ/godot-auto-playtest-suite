@@ -5,6 +5,22 @@ signal signal_on_list_changed
 
 var mouse_is_over : bool = false
 
+enum PopupChoice
+{
+	NULL = 0,
+	AddEntry = 10,
+	AddEntry_Above,
+	AddEntry_Below,
+	DuplicateEntry = 20,
+	DuplicateEntries,
+	DeleteEntry = 30,
+	DeleteEntries,
+	Cut = 40,
+	Copy,
+	Paste,
+	
+}
+
 func _ready() -> void:
 	super._ready()
 	focus_mode = FOCUS_NONE
@@ -42,16 +58,28 @@ func _create_right_click_thing():
 	
 	if item_count == 0:
 		if root.get_child_count() == 0:
-			popup.add_item("Add Entry", 0)
+			popup.add_item("Add Entry", PopupChoice.AddEntry)
 		else:
 			return
 	
 	if item_count == 1:
-		popup.add_item("Add Entry Above", 1)
-		popup.add_item("Add Entry Below", 2)
-		popup.add_item("Delete Entry", 3)
+		popup.add_item("Add Entry Above", PopupChoice.AddEntry_Above)
+		popup.add_item("Add Entry Below", PopupChoice.AddEntry_Below)
+		popup.add_item("Duplicate Entry", PopupChoice.DuplicateEntry)
+		popup.add_separator()
+		popup.add_item("Delete Entry", PopupChoice.DeleteEntry)
+		popup.add_separator()
+		popup.add_item("Cut", PopupChoice.Cut)
+		popup.add_item("Copy", PopupChoice.Copy)
+		popup.add_item("Paste", PopupChoice.Paste)
 	elif item_count > 1:
-		popup.add_item("Delete Entries", 4)
+		popup.add_item("Duplicate Entries", PopupChoice.DuplicateEntries)
+		popup.add_separator()
+		popup.add_item("Delete Entries", PopupChoice.DeleteEntries)
+		popup.add_separator()
+		popup.add_item("Cut", PopupChoice.Cut)
+		popup.add_item("Copy", PopupChoice.Copy)
+		popup.add_item("Paste", PopupChoice.Paste)
 		
 	popup.id_pressed.connect(_on_action_list_popup_pressed)
 	add_child(popup)
@@ -60,26 +88,26 @@ func _create_right_click_thing():
 	AutoPlaySuite.set_and_show_popup(popup)
 
 func _on_action_list_popup_pressed(id):
-	if id == 0: # Add First Item
-		_add_default_entry(0)
-	elif id == 1 || id == 2: # Add above / below
+	if id == PopupChoice.AddEntry:
+		add_default_entry(0)
+	elif id == PopupChoice.AddEntry_Above || id == PopupChoice.AddEntry_Below:
 		if last_selected == null:
 			return
 		
 		var current_pos : int = last_selected.get_index()
-		_add_default_entry(current_pos + (1 if id == 2 else 0))
-	elif id == 3: # Delete entry
+		add_default_entry(current_pos + (1 if id == PopupChoice.AddEntry_Below else 0))
+	elif id == PopupChoice.DeleteEntry: 
 		if last_selected == null:
 			return
 		
 		remove_item(last_selected)
 		last_selected = null
-	elif id == 4: # Delete multiple entries
+	elif id == PopupChoice.DeleteEntries:
 		var selection : Array[TreeItem] = get_all_selected()
 		for item in selection:
 			remove_item(item)
 
-func _add_default_entry(at_index : int):
+func add_default_entry(at_index : int):
 	at_index = clamp(at_index, 0, get_item_count())
 	add_and_bind_item("New Entry", AutoPlaySuiteActionResource.CreateEmpty(), at_index)
 
