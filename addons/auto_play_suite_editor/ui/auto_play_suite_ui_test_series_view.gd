@@ -39,7 +39,8 @@ signal signal_on_load_test_button_pressed
 func _ready() -> void:
 	if current_test_series == null:
 		current_test_series = AutoPlaySuiteTestSeriesResource.new()
-	
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	var ed_scale : float = 1
 	if Engine.is_editor_hint():
 		ed_scale = EditorInterface.get_editor_scale()

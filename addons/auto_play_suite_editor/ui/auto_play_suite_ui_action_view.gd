@@ -21,7 +21,9 @@ func _ready() -> void:
 	var ed_scale : float = 1
 	if Engine.is_editor_hint():
 		ed_scale = EditorInterface.get_editor_scale()
-
+	
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
 	main_panel = Panel.new()
 	main_panel.custom_minimum_size = Vector2(400, 400) * ed_scale
 	add_child(main_panel)

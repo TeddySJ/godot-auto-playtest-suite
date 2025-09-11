@@ -79,6 +79,7 @@ func _ready() -> void:
 	setup_ui.call_deferred()
 	if Engine.is_editor_hint():
 		editor_scale = EditorInterface.get_editor_scale()
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func _on_editor_main_screen_changed(screen_name):
@@ -333,6 +334,7 @@ func _new_test():
 	current_test.test_name = test_name
 	action_list.empty_list()
 	test_series_view.add_test(current_test)
+	
 
 func _on_new_test_series():
 	_new_test()

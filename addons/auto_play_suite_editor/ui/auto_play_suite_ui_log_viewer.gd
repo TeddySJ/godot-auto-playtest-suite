@@ -5,7 +5,8 @@ var dict_view : DictTreeViewer
 
 func _ready() -> void:
 	minimum_size_changed.connect(custom_minimum_size_changed)
-	
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+
 	dict_view = DictTreeViewer.new()
 	add_child(dict_view)
 	
