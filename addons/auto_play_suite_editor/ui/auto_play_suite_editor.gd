@@ -308,12 +308,16 @@ func _end_testing():
 	currently_running_test = null
 
 func _on_test_ended(test : AutoPlaySuiteTestResource):
-	signal_on_test_passed_or_failed_evaluation.emit(test, _test_passed())
+	signal_on_test_passed_or_failed_evaluation.emit(test, _test_passed(test))
 
-func _test_passed():
-	return false
-	logs_view.set_data(logs.log_dictionary[current_test_view.current_test.test_name])
-
+func _test_passed(test : AutoPlaySuiteTestResource) -> bool:
+	var log_dict : Dictionary = logs.log_dictionary[test.test_name]
+	
+	if log_dict.has(&"Default Logger"):
+		var def_log : Dictionary = log_dict[&"Default Logger"]
+		if def_log.has(&"Failed Evals"):
+			return false
+	return true
 
 func _load_log_of_current_test():
 	if !logs.log_dictionary.has(current_test_view.current_test.test_name):
