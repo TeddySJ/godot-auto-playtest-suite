@@ -4,6 +4,8 @@ class_name AutoPlaySuiteUiCurrentTestView
 var action_list : AutoPlaySuiteActionList
 var file_dialog : FileDialog
 
+var premature_end_is_error : CheckButton
+
 var save_test_button : Button
 var save_test_as_button : Button
 
@@ -34,8 +36,14 @@ func _ready() -> void:
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
 	
+	premature_end_is_error = CheckButton.new()
+	premature_end_is_error.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(0, 50)  * ed_scale
+	premature_end_is_error.text = "Unexpected End is Error"
+	add_child(premature_end_is_error)
+	premature_end_is_error.toggled.connect(_toggled_premature_end_is_error)
+	
 	save_test_button = Button.new()
-	save_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(0, 50)  * ed_scale
+	save_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(0, 100)  * ed_scale
 	save_test_button.text = "Save Test"
 	add_child(save_test_button)
 	save_test_button.pressed.connect(_save_test)
@@ -143,6 +151,7 @@ func set_current_test(new_test : AutoPlaySuiteTestResource):
 	currently_setting_new_test = true
 	current_test = new_test
 	test_name_field.text = current_test.test_name
+	premature_end_is_error.button_pressed = current_test.premature_end_is_error
 	action_list.empty_list()
 	for action in current_test.actions:
 		action_list.add_and_bind_item(action.action_id, action)	
@@ -161,3 +170,6 @@ func _set_file_dialog_size_and_position():
 
 func handle_input(event: InputEvent) -> void:
 	action_list.handle_input(event)
+
+func _toggled_premature_end_is_error(on : bool):
+	current_test.premature_end_is_error = on
