@@ -142,7 +142,7 @@ func setup_ui() -> void:
 	add_child(current_test_view)
 	current_test_view.position = Vector2(100,100) * ed_scale
 	
-	var right_side_view_position := Vector2(400, 100) * ed_scale
+	var right_side_view_position := Vector2(430, 100) * ed_scale
 	
 	action_view = AutoPlaySuiteUiActionView.new()
 	action_view.signal_on_action_changed.connect(current_test_view._sync_current_test_to_list)
@@ -153,13 +153,13 @@ func setup_ui() -> void:
 		action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
 	action_view.run_action_button.pressed.connect(_run_selected_action)
 	action_view.signal_on_action_id_changed.connect(current_test_view._on_selected_action_id_changed)
-
+	
 	#run_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 50)  * ed_scale
 	
 	#run_all_button.position = run_test_button.position + Vector2(100, 0) * ed_scale
 
 	show_logs_button = Button.new()
-	show_logs_button.position = action_view.position + Vector2(0, 400) * ed_scale
+	show_logs_button.position = action_view.position + Vector2(0, 430) * ed_scale
 	show_logs_button.text = "Show Logs"
 	add_child(show_logs_button)
 	show_logs_button.pressed.connect(_show_logger)
