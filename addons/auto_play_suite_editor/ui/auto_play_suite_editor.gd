@@ -63,6 +63,7 @@ enum CurrentContext
 	Running,
 }
 
+signal signal_on_test_passed_or_failed_evaluation(test, success)
 
 static func set_and_show_popup(new_popup : Popup):
 	if shared_popup != null:
@@ -185,6 +186,8 @@ func setup_ui() -> void:
 	current_test_view.signal_on_test_name_changed.connect(test_series_view.current_test_name_changed)
 	current_test_view.signal_on_action_list_item_selected.connect(_on_action_list_item_selected)
 	current_test_view.signal_on_current_test_saved.connect(_on_current_test_saved)
+	
+	signal_on_test_passed_or_failed_evaluation.connect(test_series_view._on_test_failed_or_passed_test)
 
 func _setup_in_single_scene():
 	init_plugin()
@@ -304,6 +307,14 @@ func _end_testing():
 	_restore_environment_after_testing()
 	currently_running_test = null
 
+func _on_test_ended(test : AutoPlaySuiteTestResource):
+	signal_on_test_passed_or_failed_evaluation.emit(test, _test_passed())
+
+func _test_passed():
+	return false
+	logs_view.set_data(logs.log_dictionary[current_test_view.current_test.test_name])
+
+
 func _load_log_of_current_test():
 	if !logs.log_dictionary.has(current_test_view.current_test.test_name):
 		logs_view.set_data({"No Data":"Please run test to generate log data"})
@@ -322,6 +333,7 @@ func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finishe
 	EditorInterface.play_main_scene()
 	await _wait_until_game_exits()
 	
+	_on_test_ended(test_resource)
 	call_on_finished.call()
 
 func _set_current_test_file_path_environment(path : String):

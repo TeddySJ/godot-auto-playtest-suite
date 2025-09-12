@@ -283,6 +283,14 @@ func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = 
 	
 	return true
 
+func _on_test_failed_or_passed_test(test : AutoPlaySuiteTestResource, success : bool):
+	var index : int = _get_index_of_test(test)
+	if !success:
+		test_button_list[index].modulate = Color.RED
+	else:
+		test_button_list[index].modulate = Color.WHITE
+		
+
 func _remove_test_button_pressed():
 	current_test_series.paths_to_tests.remove_at(current_selected_index)
 	test_button_list[current_selected_index].queue_free()
@@ -330,12 +338,16 @@ func _get_all_tests_in_order() -> Array[AutoPlaySuiteTestResource]:
 	
 	return ret
 
-func _get_test_uid_path(test_resource : AutoPlaySuiteTestResource) -> String:
+func _get_index_of_test(test_resource : AutoPlaySuiteTestResource) -> int:
 	var index : int = -1
 	for n in test_button_list.size():
 		if test_resource.test_name == underlying_dictionary[test_button_list[n]].test_name:
 			index = n
 			break
+	return index
+
+func _get_test_uid_path(test_resource : AutoPlaySuiteTestResource) -> String:
+	var index : int = _get_index_of_test(test_resource)
 	if index == -1:
 		printerr("Could not find index of test resource! (_get_test_uid_path)")
 		return ""
