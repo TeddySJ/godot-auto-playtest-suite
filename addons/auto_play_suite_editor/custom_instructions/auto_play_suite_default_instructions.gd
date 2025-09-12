@@ -26,7 +26,7 @@ func _action_debug_print_float(arguments : AutoPlaySuiteActionResource):
 func _action_exit_game(arguments : AutoPlaySuiteActionResource):
 	arguments.finished = true
 	await Engine.get_main_loop().create_timer(0.1).timeout
-	Engine.get_main_loop().quit()
+	AutoPlaySuite.QuitGame()
 
 func _action_print_hi(arguments : AutoPlaySuiteActionResource):
 	await Engine.get_main_loop().create_timer(arguments.float_var).timeout

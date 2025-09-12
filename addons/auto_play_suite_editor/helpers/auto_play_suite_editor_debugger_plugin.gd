@@ -8,6 +8,9 @@ func _capture(message: String, data: Array, session_id: int) -> bool:
 	if message == "aps:logging":
 		AutoPlaySuite.Singleton._logger_message_received(data)
 		return true
+	elif message == "aps:system":
+		AutoPlaySuite.Singleton._system_message_received(data)
+		return true
 	
 	return false
 

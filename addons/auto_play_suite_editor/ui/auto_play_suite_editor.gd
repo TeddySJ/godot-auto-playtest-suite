@@ -23,7 +23,13 @@ enum EditorPanes
 	LogView,
 }
 
-
+enum CurrentContext
+{
+	InEditor,
+	InPlugin_HasScreen,
+	InPlugin_DontHaveScreen,
+	Running,
+}
 
 var editor_scale : float = 1
 var right_pane_view : RightPaneView = RightPaneView.Hidden
@@ -43,6 +49,8 @@ var show_logs_button : Button
 
 var item_affected_by_popup : TreeItem
 
+var test_has_exited_properly : bool = false
+
 var tests_to_run : Array[AutoPlaySuiteTestResource]
 var currently_running_test : AutoPlaySuiteTestResource = null
 
@@ -55,13 +63,6 @@ var should_handle_input : bool:
 	get:
 		return current_context == CurrentContext.Running || current_context == CurrentContext.InPlugin_HasScreen
 
-enum CurrentContext
-{
-	InEditor,
-	InPlugin_HasScreen,
-	InPlugin_DontHaveScreen,
-	Running,
-}
 
 signal signal_on_test_passed_or_failed_evaluation(test, success)
 
@@ -72,6 +73,13 @@ static func set_and_show_popup(new_popup : Popup):
 	shared_popup = new_popup
 	shared_popup.show()
 	
+static func _get_plugin_singleton() -> AutoPlaySuite:
+	var root := EditorInterface.get_base_control()
+	return root.get_meta("APS_EDITOR")
+
+static func QuitGame():
+	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
+	Engine.get_main_loop().quit(0)
 
 func _enter_tree() -> void:
 	pass
@@ -79,10 +87,6 @@ func _enter_tree() -> void:
 func _register_plugin_singleton():
 	var root := EditorInterface.get_base_control()
 	root.set_meta("APS_EDITOR", self)
-
-static func _get_plugin_singleton() -> AutoPlaySuite:
-	var root := EditorInterface.get_base_control()
-	return root.get_meta("APS_EDITOR")
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -311,6 +315,9 @@ func _on_test_ended(test : AutoPlaySuiteTestResource):
 	signal_on_test_passed_or_failed_evaluation.emit(test, _test_passed(test))
 
 func _test_passed(test : AutoPlaySuiteTestResource) -> bool:
+	if !test_has_exited_properly && test.premature_end_is_error:
+		return false
+	
 	var log_dict : Dictionary = logs.log_dictionary[test.test_name]
 	
 	if log_dict.has(&"Default Logger"):
@@ -333,6 +340,7 @@ func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finishe
 	currently_running_test = test_resource
 	var path := test_series_view._get_test_uid_path(test_resource)
 	_set_current_test_file_path_environment(path)
+	test_has_exited_properly = false
 	
 	EditorInterface.play_main_scene()
 	await _wait_until_game_exits()
@@ -381,3 +389,10 @@ func _on_action_list_item_selected(action_resource):
 
 func _on_current_test_saved(uid_string : String):
 	test_series_view._update_path_to_current_test(uid_string)
+
+func _system_message_received(data : Array):
+	if data.size() == 0:
+		return
+	
+	if data[0] == &"ExitThroughTestAction":
+		test_has_exited_properly = true

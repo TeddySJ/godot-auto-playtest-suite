@@ -48,12 +48,12 @@ func _exit_on_condition(arguments : AutoPlaySuiteActionResource):
 	if Game.Singleton.people_alive.size() == 0:
 		if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
 			AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Exited because all were dead!")
-		Engine.get_main_loop().create_timer(10).timeout.connect(Engine.get_main_loop().quit.bind(0))
+		Engine.get_main_loop().create_timer(10).timeout.connect(AutoPlaySuite.QuitGame)
 		return
 	elif Game.Singleton.people_alive.size() >= 10:
 		if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
 			AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Exited because paradise was achieved! Ten alive!")
-		Engine.get_main_loop().quit()
+		AutoPlaySuite.QuitGame()
 		return
 
 	arguments.finished = true
