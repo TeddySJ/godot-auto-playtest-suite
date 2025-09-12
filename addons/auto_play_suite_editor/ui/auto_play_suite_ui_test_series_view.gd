@@ -1,4 +1,4 @@
-extends Control
+extends AutoPlaySuiteUiView
 class_name AutoPlaySuiteUiTestSeriesView
 
 var file_dialog : FileDialog

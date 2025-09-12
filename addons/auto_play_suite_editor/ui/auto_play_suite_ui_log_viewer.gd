@@ -1,4 +1,4 @@
-extends Control
+extends AutoPlaySuiteUiView
 class_name AutoPlaySuiteUiLogViewer
 
 var dict_view : DictTreeViewer

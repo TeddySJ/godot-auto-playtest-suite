@@ -15,16 +15,23 @@ enum RightPaneView
 	LogView = 2,
 }
 
+enum EditorPanes
+{
+	ActionListView,
+	ActionSeriesView,
+	ActionView,
+	LogView,
+}
+
+
+
 var editor_scale : float = 1
 var right_pane_view : RightPaneView = RightPaneView.Hidden
 
-var current_file_path : String = ""
-
 var current_test_series : AutoPlaySuiteTestSeriesResource
-var current_test : AutoPlaySuiteTestResource
 
 var test_series_view : AutoPlaySuiteUiTestSeriesView
-var action_list : AutoPlaySuiteActionList
+var current_test_view : AutoPlaySuiteUiCurrentTestView
 var action_view : AutoPlaySuiteUiActionView
 var logs_view : AutoPlaySuiteUiLogViewer
 
@@ -32,18 +39,12 @@ var logs : AutoPlaySuiteLogStore
 
 var file_dialog : FileDialog
 
-var test_name_field : LineEdit
-
-var save_test_button : Button
-var save_test_as_button : Button
 var show_logs_button : Button
 
 var item_affected_by_popup : TreeItem
 
 var tests_to_run : Array[AutoPlaySuiteTestResource]
 var currently_running_test : AutoPlaySuiteTestResource = null
-
-var currently_setting_new_test : bool = false
 
 var current_context : CurrentContext = CurrentContext.Running
 var is_in_editor : bool:
@@ -62,7 +63,6 @@ enum CurrentContext
 	Running,
 }
 
-signal signal_on_current_test_saved
 
 static func set_and_show_popup(new_popup : Popup):
 	if shared_popup != null:
@@ -90,6 +90,7 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		editor_scale = EditorInterface.get_editor_scale()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
 
 func _on_editor_main_screen_changed(screen_name):
 	if screen_name == "AutoTest":
@@ -101,7 +102,7 @@ func _input(event: InputEvent) -> void:
 	if !should_handle_input:
 		return
 		
-	if action_list == null:
+	if current_test_view == null:
 		return
 		
 	if Input.is_action_pressed("ui_focus_next") && event.is_action_pressed("ui_cancel"):
@@ -113,7 +114,7 @@ func _input(event: InputEvent) -> void:
 		else:
 			print(test_series_view.current_test_series.paths_to_tests[test_series_view.current_selected_index])
 	
-	action_list.handle_input(event)
+	current_test_view.handle_input(event)
 
 func setup_ui() -> void:
 	if current_context == CurrentContext.Running:
@@ -137,59 +138,28 @@ func setup_ui() -> void:
 	test_series_view.signal_on_new_test_button_pressed.connect(_new_test)
 	test_series_view.signal_on_load_test_button_pressed.connect(_load_button_pressed)
 	
-	action_list = AutoPlaySuiteActionList.new()
-	add_child(action_list)
-	action_list.signal_on_list_changed.connect(_sync_current_test_to_list)
-	
-	action_list.position = Vector2(100,100) * ed_scale
-	action_list.custom_minimum_size.x = 250 * ed_scale
-	action_list.custom_minimum_size.y = 300 * ed_scale
-	
-	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
+	current_test_view = AutoPlaySuiteUiCurrentTestView.new()
+	add_child(current_test_view)
+	current_test_view.position = Vector2(100,100) * ed_scale
 	
 	var right_side_view_position := Vector2(400, 100) * ed_scale
 	
 	action_view = AutoPlaySuiteUiActionView.new()
-	action_view.signal_on_action_changed.connect(_sync_current_test_to_list)
+	action_view.signal_on_action_changed.connect(current_test_view._sync_current_test_to_list)
 	add_child(action_view)
 	action_view.position = right_side_view_position
 	action_view._add_drop_down_item(&"[UNSET]")
 	if current_context != CurrentContext.InEditor:
 		action_view._fill_drop_down(AutoPlaySuiteActionLibrary.possible_actions.keys())
 	action_view.run_action_button.pressed.connect(_run_selected_action)
-	action_view.signal_on_action_id_changed.connect(_on_selected_action_id_changed)
-	
-	test_name_field = LineEdit.new()
-	test_name_field.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 10)  * ed_scale
-	test_name_field.custom_minimum_size.x = 200 * ed_scale
-	test_name_field.text_changed.connect(_test_name_field_changed)
-	add_child(test_name_field)
-	
-	var test_name_label = Label.new()
-	test_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	test_name_label.text = "Test Name:"
-	test_name_label.position = test_name_field.position + Vector2(-210, 5)  * ed_scale
-	test_name_label.custom_minimum_size.x = 200 * ed_scale
-	add_child(test_name_label)
-	
+	action_view.signal_on_action_id_changed.connect(current_test_view._on_selected_action_id_changed)
+
 	#run_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 50)  * ed_scale
 	
 	#run_all_button.position = run_test_button.position + Vector2(100, 0) * ed_scale
 
-	save_test_button = Button.new()
-	save_test_button.position = test_name_field.position + Vector2(0, 50)  * ed_scale
-	save_test_button.text = "Save Test"
-	add_child(save_test_button)
-	save_test_button.pressed.connect(_save_test)
-	
-	save_test_as_button = Button.new()
-	save_test_as_button.position = save_test_button.position + Vector2(100, 0) * ed_scale
-	save_test_as_button.text = "Save Test As"
-	add_child(save_test_as_button)
-	save_test_as_button.pressed.connect(_save_test_as)
-	
 	show_logs_button = Button.new()
-	show_logs_button.position = save_test_button.position + Vector2(100, 50) * ed_scale
+	show_logs_button.position = action_view.position + Vector2(0, 400) * ed_scale
 	show_logs_button.text = "Show Logs"
 	add_child(show_logs_button)
 	show_logs_button.pressed.connect(_show_logger)
@@ -210,6 +180,11 @@ func setup_ui() -> void:
 		_setup_in_editor()
 	
 	_new_test()
+	
+	# Cross signals
+	current_test_view.signal_on_test_name_changed.connect(test_series_view.current_test_name_changed)
+	current_test_view.signal_on_action_list_item_selected.connect(_on_action_list_item_selected)
+	current_test_view.signal_on_current_test_saved.connect(_on_current_test_saved)
 
 func _setup_in_single_scene():
 	init_plugin()
@@ -235,68 +210,6 @@ func _hide_all_right_side_elements():
 	logs_view.visible = false
 	right_pane_view = RightPaneView.Hidden
 
-func _on_action_list_item_selected():
-	var selected = action_list.last_selected
-	var action_resource : AutoPlaySuiteActionResource = action_list.backing_dictionary[selected]
-	action_view._set_action(action_resource)
-	_show_action_view()
-
-func _on_selected_action_id_changed(new_id : String):
-	action_list.update_display_text_of_selected_index()
-
-func _save_test(path : String = ""):
-	if file_dialog != null:
-		return
-	if action_list.get_item_count() == 0:
-		return
-	
-	if path == "":
-		if current_file_path == "":
-			_save_test_as()
-			return
-		path = current_file_path
-	
-	if path.begins_with("u"):
-		path = ResourceUID.get_id_path(ResourceUID.text_to_id(path))
-	
-	current_file_path = path
-	
-	_sync_current_test_to_list()
-	
-	var create : bool = current_test.test_uid == ""
-	
-	current_test.take_over_path(path)
-	ResourceSaver.save(current_test, path)
-	
-	var uid : int = ResourceSaver.get_resource_id_for_path(path)
-	var uid_string : String = ResourceUID.id_to_text(uid)
-	current_test.test_uid = uid_string
-	
-	if create:
-		ResourceSaver.save(current_test, path) # Save again to store UID
-	
-	test_series_view._update_path_to_current_test(uid_string)
-	signal_on_current_test_saved.emit()
-
-func _save_test_as():
-	if action_list.get_item_count() == 0:
-		return
-
-	if file_dialog != null:
-		return
-	
-	file_dialog = FileDialog.new()
-	add_child(file_dialog)
-	_set_file_dialog_size_and_position()
-	file_dialog.show()
-	file_dialog.add_filter("*.test.tres")
-	file_dialog.canceled.connect(_file_dialog_canceled)
-	file_dialog.file_selected.connect(_save_file_chosen)
-
-func _save_file_chosen(path : String):
-	file_dialog = null
-	_save_test(path)
-
 func _load_button_pressed():
 	if file_dialog != null:
 		return
@@ -316,7 +229,7 @@ func _set_file_dialog_size_and_position():
 
 func _load_test(path : String):
 	file_dialog = null
-	current_file_path = path
+	current_test_view.current_file_path = path
 	var test : AutoPlaySuiteTestResource = load(path)
 	
 	if test == null:
@@ -337,46 +250,19 @@ func _file_dialog_canceled():
 	file_dialog = null
 
 func _new_test():
-	current_file_path = ""
-	current_test = AutoPlaySuiteTestResource.new()
-	var test_name : String = "test #"
-	for n in 4:
-		test_name += str(randi_range(0,9)) 
-	test_name_field.text = test_name
-	current_test.test_name = test_name
-	action_list.empty_list()
-	test_series_view.add_test(current_test)
-	action_list.add_default_entry(0)
-	
+	current_test_view.new_test()
+	test_series_view.add_test(current_test_view.current_test)
 
 func _on_new_test_series():
 	_new_test()
 
-func _sync_current_test_to_list():
-	if currently_setting_new_test:
-		return
-	
-	current_test.actions.clear()
-	var all_actions : Array = action_list.get_all_items()
-	current_test.actions.append_array(all_actions)
-
 func _changed_active_test_of_series(new_test : AutoPlaySuiteTestResource):
-	current_file_path = test_series_view._get_test_uid_path(new_test)
+	current_test_view.current_file_path = test_series_view._get_test_uid_path(new_test)
 	_set_current_test(new_test)
 
 func _set_current_test(new_test : AutoPlaySuiteTestResource):
-	currently_setting_new_test = true
-	current_test = new_test
-	test_name_field.text = current_test.test_name
-	action_list.empty_list()
-	for action in current_test.actions:
-		action_list.add_and_bind_item(action.action_id, action)	
-	currently_setting_new_test = false
+	current_test_view.set_current_test(new_test)
 	_load_log_of_current_test()
-
-func _test_name_field_changed(new_name : String):
-	current_test.test_name = new_name
-	test_series_view.current_test_name_changed(new_name)
 
 func _debug_fill():
 	
@@ -390,22 +276,22 @@ func _debug_fill():
 	actions.append(AutoPlaySuiteActionResource.Create(&"[Engine] Quit", 0, "en till string!"))
 	
 	for action in actions:
-		action_list.add_and_bind_item(action.action_id, action)
+		current_test_view.action_list.add_and_bind_item(action.action_id, action)
 
 func _run_selected_action():
 	if action_view.underlying_action != null:
 		AutoPlaySuiteActionLibrary.possible_actions[action_view.underlying_action.action_id].on_enter.call(action_view.underlying_action)
 
 func _run_current_test():
-	if current_file_path == "":
+	if current_test_view.current_file_path == "":
 		printerr("Test must be saved to file before running it!")
 		return
 	
-	_save_test()
+	current_test_view._save_test()
 	
 	_prepare_for_testing()
 	
-	_run_single_test(current_test, _end_testing)
+	_run_single_test(current_test_view.current_test, _end_testing)
 	
 
 func _prepare_for_testing():
@@ -419,11 +305,11 @@ func _end_testing():
 	currently_running_test = null
 
 func _load_log_of_current_test():
-	if !logs.log_dictionary.has(current_test.test_name):
+	if !logs.log_dictionary.has(current_test_view.current_test.test_name):
 		logs_view.set_data({"No Data":"Please run test to generate log data"})
 		return
 	
-	logs_view.set_data(logs.log_dictionary[current_test.test_name])
+	logs_view.set_data(logs.log_dictionary[current_test_view.current_test.test_name])
 
 func _setup_environment_for_testing():
 	OS.set_environment("DoAutoTesting", "true")
@@ -471,4 +357,11 @@ func init_plugin():
 	AutoPlaySuiteInstructionLoader.LoadAllInstructions()
 	
 	current_test_series = AutoPlaySuiteTestSeriesResource.new()
-	current_test = AutoPlaySuiteTestResource.new()
+	#current_test_view.current_test = AutoPlaySuiteTestResource.new()
+
+func _on_action_list_item_selected(action_resource):
+	action_view._set_action(action_resource)
+	_show_action_view()
+
+func _on_current_test_saved(uid_string : String):
+	test_series_view._update_path_to_current_test(uid_string)

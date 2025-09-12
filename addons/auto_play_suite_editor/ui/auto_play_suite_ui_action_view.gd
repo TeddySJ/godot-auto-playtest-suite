@@ -1,4 +1,4 @@
-extends Control
+extends AutoPlaySuiteUiView
 class_name AutoPlaySuiteUiActionView
 
 static var index_pool : int = 0
