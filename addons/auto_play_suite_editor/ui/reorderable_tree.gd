@@ -5,6 +5,7 @@ class_name ReorderableTree
 var root : TreeItem
 
 var last_selected : TreeItem = null
+var currently_selected : TreeItem = null
 
 var backing_dictionary : Dictionary[TreeItem, Variant]
 
@@ -138,5 +139,6 @@ func _drop_data(at_position: Vector2, data):
 	signal_on_item_order_changed.emit()
 
 func _on_cell_selected() -> void:
-	last_selected = get_selected()
+	last_selected = currently_selected
+	currently_selected = get_selected()
 	signal_on_cell_selected.emit()

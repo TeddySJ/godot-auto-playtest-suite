@@ -52,7 +52,7 @@ func _emit_list_changed():
 	signal_on_list_changed.emit()
 
 func update_display_text_of_selected_index():
-	last_selected.set_text(0, backing_dictionary[last_selected].action_id)
+	currently_selected.set_text(0, backing_dictionary[currently_selected].action_id)
 
 func _update_display_text_at_index(index : int):
 	pass
@@ -101,10 +101,10 @@ func _add_entry():
 	add_default_entry(0)
 
 func _add_entry_above_or_below(is_below : bool):
-	if last_selected == null:
+	if currently_selected == null:
 		return
 
-	var current_pos : int = last_selected.get_index()
+	var current_pos : int = currently_selected.get_index()
 	add_default_entry(current_pos + (1 if is_below else 0))
 
 func _duplicate_entries():
@@ -138,7 +138,7 @@ func _copy_entries():
 	_add_entries_to_buffer(list_of_actions)
 
 func _paste_entries():
-	var start_index = get_index_of_tree_item(last_selected)
+	var start_index = get_index_of_tree_item(currently_selected)
 	for n in copied_keys.size():
 		var reverse_index = copied_keys.size() - 1 - n
 		add_and_bind_item(copied_keys[reverse_index].get_text(0), copied_values[reverse_index].duplicate(true), start_index + 1)

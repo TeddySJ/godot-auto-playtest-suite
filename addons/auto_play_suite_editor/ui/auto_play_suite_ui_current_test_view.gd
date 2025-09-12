@@ -13,6 +13,7 @@ var current_file_path : String = ""
 var current_test : AutoPlaySuiteTestResource
 var test_name_field : LineEdit
 
+signal signal_on_about_to_change_from_action(current_action)
 signal signal_on_test_name_changed(new_name)
 signal signal_on_action_list_item_selected(action_resource)
 signal signal_on_current_test_saved(uid_string)
@@ -60,7 +61,7 @@ func _ready() -> void:
 
 
 func _on_action_list_item_selected():
-	var selected = action_list.last_selected
+	var selected = action_list.currently_selected
 	var action_resource : AutoPlaySuiteActionResource = action_list.backing_dictionary[selected]
 	signal_on_action_list_item_selected.emit(action_resource)
 
