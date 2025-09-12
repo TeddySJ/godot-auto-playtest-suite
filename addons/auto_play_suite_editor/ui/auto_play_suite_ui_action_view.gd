@@ -92,6 +92,14 @@ func _float_var_changed(new_value : float):
 	signal_on_action_changed.emit()
 
 func _set_action(action_to_set : AutoPlaySuiteActionResource):
+	if underlying_action != null:
+		if float_var_spinbox.get_line_edit().text != "":
+			var text_value = float(float_var_spinbox.get_line_edit().text)
+			if text_value != float_var_spinbox.value:
+				float_var_spinbox.set_value_no_signal(float(float_var_spinbox.get_line_edit().text))
+				float_var_spinbox.get_line_edit().text = ""
+				underlying_action.float_var = text_value
+		
 	underlying_action = action_to_set
 	_update_text_fields()
 
