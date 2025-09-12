@@ -59,6 +59,15 @@ func get_all_selected() -> Array[TreeItem]:
 	
 	return ret
 
+func get_all_selected_as_backing_type() -> Array:
+	var ret : Array = []
+	var tree_items : Array[TreeItem] = get_all_selected()
+	
+	for item in tree_items:
+		ret.append(backing_dictionary[item])
+	
+	return ret
+
 func get_index_of_tree_item(tree_item) -> int:
 	var all_tree_items := root.get_children()
 	for n in all_tree_items.size():
