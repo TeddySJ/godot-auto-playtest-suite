@@ -91,7 +91,6 @@ func _ready() -> void:
 		editor_scale = EditorInterface.get_editor_scale()
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-
 func _on_editor_main_screen_changed(screen_name):
 	if screen_name == "AutoTest":
 		current_context = CurrentContext.InPlugin_HasScreen
@@ -101,9 +100,12 @@ func _on_editor_main_screen_changed(screen_name):
 func _input(event: InputEvent) -> void:
 	if !should_handle_input:
 		return
-	
+		
 	if action_list == null:
 		return
+		
+	if Input.is_action_pressed("ui_focus_next") && event.is_action_pressed("ui_cancel"):
+		_debug_fill.call_deferred()
 	
 	if event.is_action_pressed("ui_cancel"):
 		if test_series_view.current_selected_index == -1:
@@ -377,14 +379,18 @@ func _test_name_field_changed(new_name : String):
 	test_series_view.current_test_name_changed(new_name)
 
 func _debug_fill():
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "en till string!"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Hi X Seconds", 0.5, "jupp"))
-	current_test.actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Quit", 0, "en till string!"))
 	
-	for action in current_test.actions:
-		action_list.add_and_bind_item(action.action_id, action)	
+	#action_list.empty_list()
+	
+	var actions : Array[AutoPlaySuiteActionResource] = []
+	actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print String", 0, "jamen de string"))
+	actions.append(AutoPlaySuiteActionResource.Create(&"[Debug] Print Float", 1, "den här texten syns inte!"))
+	actions.append(AutoPlaySuiteActionResource.Create(&"[Wait] Wait X Seconds", 0, "en till string!"))
+	actions.append(AutoPlaySuiteActionResource.Create(&"[Logging] Start Logger", 0.5, "jupp"))
+	actions.append(AutoPlaySuiteActionResource.Create(&"[Engine] Quit", 0, "en till string!"))
+	
+	for action in actions:
+		action_list.add_and_bind_item(action.action_id, action)
 
 func _run_selected_action():
 	if action_view.underlying_action != null:
