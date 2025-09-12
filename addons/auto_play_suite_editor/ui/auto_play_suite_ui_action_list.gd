@@ -5,7 +5,7 @@ signal signal_on_list_changed
 
 var mouse_is_over : bool = false
 
-var copied_keys : Array[TreeItem]
+var copied_keys : Array[String]
 var copied_values  : Array[AutoPlaySuiteActionResource]
 
 enum PopupChoice
@@ -141,14 +141,14 @@ func _paste_entries():
 	var start_index = get_index_of_tree_item(currently_selected)
 	for n in copied_keys.size():
 		var reverse_index = copied_keys.size() - 1 - n
-		add_and_bind_item(copied_keys[reverse_index].get_text(0), copied_values[reverse_index].duplicate(true), start_index + 1)
+		add_and_bind_item(copied_keys[reverse_index], copied_values[reverse_index].duplicate(true), start_index + 1)
 
 func _add_entries_to_buffer(entries  : Array):
 	copied_keys.clear()
 	copied_values.clear()
 	
 	for entry : TreeItem in entries:
-		copied_keys.append(entry)
+		copied_keys.append(entry.get_text(0))
 		copied_values.append(backing_dictionary[entry])
 
 func add_default_entry(at_index : int):
