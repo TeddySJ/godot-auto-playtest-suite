@@ -10,6 +10,8 @@ var output_log : Array[String]
 
 var logger_name : String = "[Undefined Logger]"
 
+static var failed_evaluations : int = 0
+
 func _ready() -> void:
 	setup()
 
@@ -38,6 +40,10 @@ func log_to_list_entry(key : String, data, also_to_output : bool):
 	write_as_entry(key, array)
 	if also_to_output:
 		write_to_output(data)
+
+func log_failed_evaluation(data):
+	EngineDebugger.send_message("aps:logging", ["Default Logger", "Failed Evaluation", str(failed_evaluations), data])
+	failed_evaluations += 1
 
 static func get_logger_by_class_name(c_name : String) -> Object:
 	if !CreatedLoggers.has(c_name):

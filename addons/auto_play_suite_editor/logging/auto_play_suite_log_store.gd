@@ -30,7 +30,11 @@ func handle_debugger_message(data: Array):
 	elif target == "Set Data":
 		var key : String = data[2]
 		dict[key] = data[3]
-	
+	elif target == "Failed Evaluation":
+		var failed_eval_dict = dict.get_or_add("Failed Evals", {})
+		var key : String = data[2]
+		failed_eval_dict[key] = data[3]
+
 	print("Dict Size: ", log_dictionary.size())
 
 func print_all_logs():
