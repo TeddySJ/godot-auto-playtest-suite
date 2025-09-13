@@ -6,6 +6,9 @@ var file_dialog : FileDialog
 
 var premature_end_is_error : CheckButton
 
+var main_actions_button : Button
+var post_actions_button : Button
+
 var save_test_button : Button
 var save_test_as_button : Button
 
@@ -15,6 +18,10 @@ var current_file_path : String = ""
 var current_test : AutoPlaySuiteTestResource
 var test_name_field : LineEdit
 
+var _layout_current_bot_element : int = 0
+
+var editor_scale = 1
+
 signal signal_on_about_to_change_from_action(current_action)
 signal signal_on_test_name_changed(new_name)
 signal signal_on_action_list_item_selected(action_resource)
@@ -22,51 +29,70 @@ signal signal_on_current_test_saved(uid_string)
 
 func _ready() -> void:
 	
-	var ed_scale : float = 1
 	if Engine.is_editor_hint():
-		ed_scale = EditorInterface.get_editor_scale()
+		editor_scale = EditorInterface.get_editor_scale()
 
 	
 	action_list = AutoPlaySuiteActionList.new()
 	add_child(action_list)
 	action_list.signal_on_list_changed.connect(_sync_current_test_to_list)
 	
-	action_list.custom_minimum_size.x = 250 * ed_scale
-	action_list.custom_minimum_size.y = 300 * ed_scale
+	action_list.custom_minimum_size.x = 250 * editor_scale
+	action_list.custom_minimum_size.y = 300 * editor_scale
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
 	
+	main_actions_button = Button.new()
+	main_actions_button.position = get_position_of_next_element()
+	main_actions_button.text = "Main List"
+	main_actions_button.focus_mode = Control.FOCUS_NONE
+	add_child(main_actions_button)
+	main_actions_button.pressed.connect(_set_list_to_main_actions)
+	
+	post_actions_button = Button.new()
+	post_actions_button.position = main_actions_button.position + Vector2(100, 0) * editor_scale
+	post_actions_button.text = "Post List"
+	post_actions_button.focus_mode = Control.FOCUS_NONE
+	add_child(post_actions_button)
+	post_actions_button.pressed.connect(_set_list_to_post_actions)
+	
 	premature_end_is_error = CheckButton.new()
-	premature_end_is_error.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(0, 50)  * ed_scale
+	premature_end_is_error.position = get_position_of_next_element()
 	premature_end_is_error.text = "Unexpected End is Error"
 	add_child(premature_end_is_error)
 	premature_end_is_error.toggled.connect(_toggled_premature_end_is_error)
 	
-	save_test_button = Button.new()
-	save_test_button.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(0, 100)  * ed_scale
-	save_test_button.text = "Save Test"
-	add_child(save_test_button)
-	save_test_button.pressed.connect(_save_test)
-	
-	save_test_as_button = Button.new()
-	save_test_as_button.position = save_test_button.position + Vector2(100, 0) * ed_scale
-	save_test_as_button.text = "Save Test As"
-	add_child(save_test_as_button)
-	save_test_as_button.pressed.connect(_save_test_as)
-	
 	test_name_field = LineEdit.new()
-	test_name_field.position = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(100, 10)  * ed_scale
-	test_name_field.custom_minimum_size.x = 200 * ed_scale
+	test_name_field.position = get_position_of_next_element()
+	test_name_field.custom_minimum_size.x = 200 * editor_scale
 	test_name_field.text_changed.connect(_test_name_field_changed)
 	add_child(test_name_field)
 	
 	var test_name_label = Label.new()
 	test_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	test_name_label.text = "Test Name:"
-	test_name_label.position = test_name_field.position + Vector2(-210, 5)  * ed_scale
-	test_name_label.custom_minimum_size.x = 200 * ed_scale
+	test_name_label.position = test_name_field.position + Vector2(-210, 5)  * editor_scale
+	test_name_label.custom_minimum_size.x = 200 * editor_scale
 	add_child(test_name_label)
-
+	
+	save_test_button = Button.new()
+	save_test_button.position = get_position_of_next_element()
+	save_test_button.text = "Save Test"
+	add_child(save_test_button)
+	save_test_button.pressed.connect(_save_test)
+	
+	save_test_as_button = Button.new()
+	save_test_as_button.position = save_test_button.position + Vector2(100, 0) * editor_scale
+	save_test_as_button.text = "Save Test As"
+	add_child(save_test_as_button)
+	save_test_as_button.pressed.connect(_save_test_as)
+	
+func get_position_of_next_element() -> Vector2:
+	var lower_elements_start = Vector2(0, action_list.position.y + action_list.custom_minimum_size.y) + Vector2(0, 10)  * editor_scale
+	var between_elements : float = 40 * editor_scale
+	
+	_layout_current_bot_element += 1
+	return lower_elements_start + Vector2(0, between_elements * (_layout_current_bot_element - 1))
 
 func _on_action_list_item_selected():
 	var selected = action_list.currently_selected
@@ -159,6 +185,12 @@ func set_current_test(new_test : AutoPlaySuiteTestResource):
 
 func _file_dialog_canceled():
 	file_dialog = null
+
+func _set_list_to_main_actions():
+	print("Main")
+
+func _set_list_to_post_actions():
+	print("Post")
 
 func _test_name_field_changed(new_name : String):
 	current_test.test_name = new_name
