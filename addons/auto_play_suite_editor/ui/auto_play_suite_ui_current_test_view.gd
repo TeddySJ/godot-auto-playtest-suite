@@ -1,7 +1,16 @@
 extends AutoPlaySuiteUiView
 class_name AutoPlaySuiteUiCurrentTestView
 
+enum CurrentList
+{
+	Main,
+	Post,
+}
+
+var current_list : CurrentList = CurrentList.Main
+
 var action_list : AutoPlaySuiteActionList
+var post_action_list : AutoPlaySuiteActionList
 var file_dialog : FileDialog
 
 var premature_end_is_error : CheckButton
@@ -41,6 +50,16 @@ func _ready() -> void:
 	action_list.custom_minimum_size.y = 300 * editor_scale
 	
 	action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
+	
+	post_action_list = AutoPlaySuiteActionList.new()
+	add_child(post_action_list)
+	post_action_list.signal_on_list_changed.connect(_sync_current_test_to_list)
+	
+	post_action_list.custom_minimum_size.x = 250 * editor_scale
+	post_action_list.custom_minimum_size.y = 300 * editor_scale
+	
+	post_action_list.signal_on_cell_selected.connect(_on_action_list_item_selected)
+	post_action_list.visible = false
 	
 	main_actions_button = Button.new()
 	main_actions_button.position = get_position_of_next_element()
@@ -94,13 +113,21 @@ func get_position_of_next_element() -> Vector2:
 	_layout_current_bot_element += 1
 	return lower_elements_start + Vector2(0, between_elements * (_layout_current_bot_element - 1))
 
+func get_active_list() -> AutoPlaySuiteActionList:
+	if current_list == CurrentList.Main:
+		return action_list
+	else:
+		return post_action_list
+
 func _on_action_list_item_selected():
-	var selected = action_list.currently_selected
-	var action_resource : AutoPlaySuiteActionResource = action_list.backing_dictionary[selected]
+	var list_to_use = get_active_list()
+	
+	var selected = list_to_use.currently_selected
+	var action_resource : AutoPlaySuiteActionResource = list_to_use.backing_dictionary[selected]
 	signal_on_action_list_item_selected.emit(action_resource)
 
 func _on_selected_action_id_changed(new_id : String):
-	action_list.update_display_text_of_selected_index()
+	get_active_list().update_display_text_of_selected_index()
 
 func _save_test(path : String = ""):
 	if file_dialog != null:
@@ -161,6 +188,10 @@ func _sync_current_test_to_list():
 	current_test.actions.clear()
 	var all_actions : Array = action_list.get_all_items()
 	current_test.actions.append_array(all_actions)
+	
+	current_test.post_actions.clear()
+	all_actions = post_action_list.get_all_items()
+	current_test.post_actions.append_array(all_actions)
 
 func new_test():
 	current_file_path = ""
@@ -173,6 +204,9 @@ func new_test():
 	action_list.empty_list()
 	action_list.add_default_entry(0)
 	
+	post_action_list.empty_list()
+	
+	
 func set_current_test(new_test : AutoPlaySuiteTestResource):
 	currently_setting_new_test = true
 	current_test = new_test
@@ -181,16 +215,23 @@ func set_current_test(new_test : AutoPlaySuiteTestResource):
 	action_list.empty_list()
 	for action in current_test.actions:
 		action_list.add_and_bind_item(action.action_id, action)	
+	post_action_list.empty_list()
+	for action in current_test.post_actions:
+		post_action_list.add_and_bind_item(action.action_id, action)	
 	currently_setting_new_test = false
 
 func _file_dialog_canceled():
 	file_dialog = null
 
 func _set_list_to_main_actions():
-	print("Main")
+	current_list = CurrentList.Main
+	action_list.visible = true
+	post_action_list.visible = false
 
 func _set_list_to_post_actions():
-	print("Post")
+	current_list = CurrentList.Post
+	action_list.visible = false
+	post_action_list.visible = true
 
 func _test_name_field_changed(new_name : String):
 	current_test.test_name = new_name
@@ -201,7 +242,10 @@ func _set_file_dialog_size_and_position():
 	file_dialog.position = global_position
 
 func handle_input(event: InputEvent) -> void:
-	action_list.handle_input(event)
+	if current_list == CurrentList.Main:
+		action_list.handle_input(event)
+	else:
+		post_action_list.handle_input(event)
 
 func _toggled_premature_end_is_error(on : bool):
 	current_test.premature_end_is_error = on
