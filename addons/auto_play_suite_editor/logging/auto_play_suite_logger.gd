@@ -39,6 +39,9 @@ func log_to_list_entry(key : String, data, also_to_output : bool):
 	if also_to_output:
 		write_to_output(data)
 
+static func get_default_logger() -> AutoPlaySuiteDefaultLogger:
+	return AutoPlaySuiteDefaultLogger.Singleton
+
 static func get_logger_by_class_name(c_name : String) -> Object:
 	if !CreatedLoggers.has(c_name):
 		printerr("Tried to find a logger that hasn't been instantiated: ", c_name)

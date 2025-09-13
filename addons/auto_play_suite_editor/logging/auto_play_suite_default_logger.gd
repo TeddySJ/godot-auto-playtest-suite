@@ -1,7 +1,14 @@
 extends AutoPlaySuiteLogger
 class_name AutoPlaySuiteDefaultLogger
 
+static var Singleton : AutoPlaySuiteDefaultLogger
+
 func setup():
+	if Singleton:
+		queue_free()
+		return
+	
+	Singleton = self
 	forward_output_to_editor = true
 	logger_name = "Default Logger"
 
