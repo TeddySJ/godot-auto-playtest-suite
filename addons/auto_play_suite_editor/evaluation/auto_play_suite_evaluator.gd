@@ -39,13 +39,18 @@ static func instantiate_by_class_name(c_name: String) -> Object:
 		printerr("Tried instancing two evaluators of the class ", c_name, "! There can only be one per evaluator type.")
 		return
 	
+	var real_c_name : String = c_name
+	
+	if !c_name.begins_with("AutoPlaySuiteCustomEvaluator_"):
+		real_c_name = str("AutoPlaySuiteCustomEvaluator_", c_name)
+	
 	for entry in ProjectSettings.get_global_class_list():
-		if entry["class"] == c_name:
+		if entry["class"] == real_c_name:
 			var script: Script = load(entry["path"])
 			var instance = script.new()
 			if instance is AutoPlaySuiteEvaluator:
 				CreatedEvaluators[c_name] = instance
 				return instance
 			else:
-				printerr("Tried instancing the class ", c_name, " but it was not present in the global class list!")
+				printerr("Tried instancing the class ", real_c_name, " but it was not present in the global class list!")
 	return null

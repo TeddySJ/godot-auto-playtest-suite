@@ -58,16 +58,16 @@ func _instruct_logger(arguments : AutoPlaySuiteActionResource):
 
 func _start_evaluator(arguments : AutoPlaySuiteActionResource):
 	arguments.finished = true
-	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.instantiate_by_class_name(arguments.string_var)
-	if logger == null:
-		print("Failed to create logger of type: ", arguments.string_var)
+	var evaluator : AutoPlaySuiteEvaluator = AutoPlaySuiteEvaluator.instantiate_by_class_name(arguments.string_var)
+	if evaluator == null:
+		print("Failed to create evaluator of type: ", arguments.string_var)
 		return
 	
-	Engine.get_main_loop().root.add_child.call_deferred(logger)
+	Engine.get_main_loop().root.add_child.call_deferred(evaluator)
 
 func _instruct_evaluator(arguments : AutoPlaySuiteActionResource):
 	arguments.finished = true
-	var strings : Array[String] = arguments.string_var.split(":")
+	var strings : PackedStringArray = arguments.string_var.split(":")
 	var evaluator : AutoPlaySuiteEvaluator = AutoPlaySuiteEvaluator.get_evaluator_by_class_name(strings[0])
 	if evaluator == null:
 		print("Failed to get evaluator of type: ", strings[0])

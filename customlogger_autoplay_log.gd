@@ -15,6 +15,10 @@ func setup():
 	forward_output_to_editor = true
 	logger_name = "Logger of Life"
 	write_to_output("Created Logger!")
+	var participants : String = "Participants: "
+	for person in Game.Singleton.people_alive:
+		participants += str(person, " ")
+	write_to_output(participants)
 
 func _on_game_message(message : String):
 	write_to_output(message)
