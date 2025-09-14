@@ -196,6 +196,7 @@ func _sync_current_test_to_list():
 	current_test.post_actions.append_array(all_actions)
 
 func new_test():
+	currently_setting_new_test = true
 	current_file_path = ""
 	current_test = AutoPlaySuiteTestResource.new()
 	var test_name : String = "test #"
@@ -207,6 +208,7 @@ func new_test():
 	action_list.add_default_entry(0)
 	
 	post_action_list.empty_list()
+	currently_setting_new_test = false
 	
 	
 func set_current_test(new_test : AutoPlaySuiteTestResource):
