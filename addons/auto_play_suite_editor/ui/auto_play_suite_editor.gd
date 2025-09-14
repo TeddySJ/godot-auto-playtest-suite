@@ -267,6 +267,7 @@ func _changed_active_test_of_series(new_test : AutoPlaySuiteTestResource):
 func _set_current_test(new_test : AutoPlaySuiteTestResource):
 	current_test_view.set_current_test(new_test)
 	_load_log_of_current_test()
+	action_view.visible = false
 
 func _debug_fill():
 	
