@@ -112,12 +112,6 @@ func _ready() -> void:
 	save_series_as_button.pressed.connect(_save_test_series_as)
 	add_child(save_series_as_button)
 	
-	remove_test_button = Button.new()
-	remove_test_button.text = "Remove Test"
-	remove_test_button.position = button_start_pos + Vector2(470, 0) * ed_scale
-	remove_test_button.pressed.connect(_remove_test_button_pressed)
-	add_child(remove_test_button)
-	
 	load_test_button = Button.new()
 	load_test_button.position = Vector2(-90, 40) * ed_scale
 	load_test_button.text = "Load Test"
@@ -130,6 +124,11 @@ func _ready() -> void:
 	add_child(new_test_button)
 	new_test_button.pressed.connect(signal_on_new_test_button_pressed.emit)
 	
+	remove_test_button = Button.new()
+	remove_test_button.text = "Remove"
+	remove_test_button.position = new_test_button.position + Vector2(0, 50) * ed_scale
+	remove_test_button.pressed.connect(_remove_test_button_pressed)
+	add_child(remove_test_button)
 
 func _new_series_button_pressed():
 	clear()
