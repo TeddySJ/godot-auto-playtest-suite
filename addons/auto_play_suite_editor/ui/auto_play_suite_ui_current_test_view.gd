@@ -35,6 +35,7 @@ signal signal_on_about_to_change_from_action(current_action)
 signal signal_on_test_name_changed(new_name)
 signal signal_on_action_list_item_selected(action_resource)
 signal signal_on_current_test_saved(uid_string)
+signal signal_on_action_list_changed
 
 func _ready() -> void:
 	
@@ -230,6 +231,7 @@ func _set_list_to_main_actions():
 	post_action_list.visible = false
 	main_actions_button.disabled = true
 	post_actions_button.disabled = false
+	signal_on_action_list_changed.emit()
 
 func _set_list_to_post_actions():
 	current_list = CurrentList.Post
@@ -237,6 +239,11 @@ func _set_list_to_post_actions():
 	post_action_list.visible = true
 	main_actions_button.disabled = false
 	post_actions_button.disabled = true
+	signal_on_action_list_changed.emit()
+
+func deselect_all():
+	action_list.deselect_all()
+	post_action_list.deselect_all()
 
 func _test_name_field_changed(new_name : String):
 	current_test.test_name = new_name

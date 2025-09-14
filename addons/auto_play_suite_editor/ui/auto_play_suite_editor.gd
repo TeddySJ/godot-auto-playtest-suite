@@ -186,6 +186,7 @@ func setup_ui() -> void:
 	current_test_view.signal_on_test_name_changed.connect(test_series_view.current_test_name_changed)
 	current_test_view.signal_on_action_list_item_selected.connect(_on_action_list_item_selected)
 	current_test_view.signal_on_current_test_saved.connect(_on_current_test_saved)
+	current_test_view.signal_on_action_list_changed.connect(_current_action_list_changed)
 	
 	signal_on_test_passed_or_failed_evaluation.connect(test_series_view._on_test_failed_or_passed_test)
 
@@ -375,6 +376,10 @@ func _wait_until_game_exits() -> void:
 	await get_tree().process_frame
 	while EditorInterface.is_playing_scene():
 		await get_tree().process_frame
+
+func _current_action_list_changed():
+	current_test_view.deselect_all()
+	action_view.visible = false
 
 func init_plugin():
 	AutoPlaySuiteInstructionLoader.LoadAllInstructions()
