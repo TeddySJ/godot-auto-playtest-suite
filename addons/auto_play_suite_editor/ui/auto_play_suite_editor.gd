@@ -77,10 +77,6 @@ static func _get_plugin_singleton() -> AutoPlaySuite:
 	var root := EditorInterface.get_base_control()
 	return root.get_meta("APS_EDITOR")
 
-static func QuitGame():
-	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
-	Engine.get_main_loop().quit(0)
-
 func _enter_tree() -> void:
 	pass
 
@@ -317,6 +313,9 @@ func _on_test_ended(test : AutoPlaySuiteTestResource):
 func _test_passed(test : AutoPlaySuiteTestResource) -> bool:
 	if !test_has_exited_properly && test.premature_end_is_error:
 		return false
+	
+	if !logs.log_dictionary.has(test.test_name):
+		return true
 	
 	var log_dict : Dictionary = logs.log_dictionary[test.test_name]
 	

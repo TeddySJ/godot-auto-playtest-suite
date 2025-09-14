@@ -16,6 +16,8 @@ var current_action : AutoPlaySuiteActionResource
 
 var current_action_instruction : AutoPlaySuiteInstructionDefinition
 
+var post_actions_has_been_ran : bool = false
+
 func _ready() -> void:
 	Singleton = self
 
@@ -71,6 +73,18 @@ func _testing_finished():
 	current_action = null
 	actions_to_do = []
 
+func has_post_actions():
+	return test_resource.post_actions.size() > 0
+
+func run_post_actions():
+	if post_actions_has_been_ran:
+		return
+	post_actions_has_been_ran = true
+	
+	print("Post Actions: ", test_resource.post_actions.size())
+	for post_action in test_resource.post_actions:
+		_run_action(post_action)
+
 static func start_testing():
 	var path := OS.get_environment("AutoTestPath")
 	var test : AutoPlaySuiteTestResource = load(path)
@@ -86,6 +100,14 @@ static func _run_test(test : AutoPlaySuiteTestResource):
 	var test_runner := AutoPlaySuiteTestRunner.instance()
 	test_runner._start_test(test)
 
+static func QuitGame():
+	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
+	
+	if Singleton.has_post_actions():
+		Singleton.run_post_actions()
+		await Engine.get_main_loop().create_timer(0.2).timeout
+	
+	Engine.get_main_loop().quit(0)
 
 static func instance() -> AutoPlaySuiteTestRunner:
 	if Singleton != null:
