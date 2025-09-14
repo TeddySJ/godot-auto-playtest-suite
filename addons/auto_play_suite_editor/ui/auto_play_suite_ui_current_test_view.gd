@@ -67,6 +67,7 @@ func _ready() -> void:
 	main_actions_button.focus_mode = Control.FOCUS_NONE
 	add_child(main_actions_button)
 	main_actions_button.pressed.connect(_set_list_to_main_actions)
+	main_actions_button.disabled = true
 	
 	post_actions_button = Button.new()
 	post_actions_button.position = main_actions_button.position + Vector2(100, 0) * editor_scale
@@ -227,11 +228,15 @@ func _set_list_to_main_actions():
 	current_list = CurrentList.Main
 	action_list.visible = true
 	post_action_list.visible = false
+	main_actions_button.disabled = true
+	post_actions_button.disabled = false
 
 func _set_list_to_post_actions():
 	current_list = CurrentList.Post
 	action_list.visible = false
 	post_action_list.visible = true
+	main_actions_button.disabled = false
+	post_actions_button.disabled = true
 
 func _test_name_field_changed(new_name : String):
 	current_test.test_name = new_name
