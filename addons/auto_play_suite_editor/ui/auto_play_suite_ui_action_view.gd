@@ -96,11 +96,17 @@ func _filter_drop_down(filter_text : String):
 		_select_in_drop_down(current_drop_down_option)
 		return
 	
+	var filters := filter_text.split(" ")
+	
 	var all_names = backing_dictionary.keys()
 	var matched_names : Array[StringName] = []
 	for n in all_names.size():
 		var str : StringName = all_names[n]
-		if str.containsn(filter_text):
+		var has_all : bool = true
+		for filter in filters:
+			if !str.containsn(filter):
+				has_all = false
+		if has_all:
 			matched_names.append(str)
 	drop_down.clear()
 	var added_current: bool = false
