@@ -7,6 +7,7 @@ class_name AutoPlaySuiteActionResource
 @export var extra_vars : Array[String]
 
 var finished : bool = false
+var entered : bool = false
 
 static func Create(action_id : StringName, float_var : float = 0, string_var : String = "", extra_vars : Array[String] = []):
 	var ret = AutoPlaySuiteActionResource.new()

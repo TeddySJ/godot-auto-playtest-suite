@@ -20,6 +20,7 @@ var post_actions_has_been_ran : bool = false
 
 func _ready() -> void:
 	Singleton = self
+	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _start_test(test : AutoPlaySuiteTestResource):
 	test_resource = test.duplicate()
@@ -46,7 +47,9 @@ func interrupt_with_this_action(action_resource : AutoPlaySuiteActionResource):
 		return
 	
 	var action_instruction : AutoPlaySuiteInstructionDefinition = AutoPlaySuiteActionLibrary.possible_actions[action_resource.action_id]
+	actions_to_do.insert(0, current_action)
 	actions_to_do.insert(0, action_resource)
+	current_action = action_resource
 	_run_current_action()
 
 func _run_current_action():
@@ -60,7 +63,9 @@ func _progress_testing():
 	if actions_to_do.size() > 0:
 		current_action = actions_to_do[0]
 		actions_to_do.remove_at(0)
-		_run_current_action()
+		if !current_action.entered:
+			current_action.entered = true
+			_run_current_action()
 	else:
 		_end_current_test()
 
