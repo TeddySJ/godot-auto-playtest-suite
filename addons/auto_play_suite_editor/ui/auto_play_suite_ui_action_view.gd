@@ -104,7 +104,7 @@ func _filter_drop_down(filter_text : String):
 		var str : StringName = all_names[n]
 		var has_all : bool = true
 		for filter in filters:
-			if !str.containsn(filter):
+			if filter != "" && !str.containsn(filter):
 				has_all = false
 		if has_all:
 			matched_names.append(str)
