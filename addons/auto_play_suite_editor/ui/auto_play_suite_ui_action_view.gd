@@ -35,7 +35,7 @@ func _ready() -> void:
 	filter_line_edit = LineEdit.new()
 	filter_line_edit.position = Vector2(30, y_offset + 0)* ed_scale
 	filter_line_edit.custom_minimum_size.x = 300 * ed_scale
-	filter_line_edit.text_changed.connect(_filter_drop_down)
+	filter_line_edit.text_changed.connect(_filter_line_edit_changed)
 	main_panel.add_child(filter_line_edit)
 	
 	drop_down = OptionButton.new()
@@ -100,7 +100,7 @@ func _filter_drop_down(filter_text : String):
 	var matched_names : Array[StringName] = []
 	for n in all_names.size():
 		var str : StringName = all_names[n]
-		if str.contains(filter_text):
+		if str.containsn(filter_text):
 			matched_names.append(str)
 	drop_down.clear()
 	var added_current: bool = false
@@ -112,7 +112,11 @@ func _filter_drop_down(filter_text : String):
 		drop_down.add_item(current_drop_down_option, backing_dictionary[current_drop_down_option])
 	#drop_down.text = current_drop_down_option
 	_select_in_drop_down(current_drop_down_option)
-	
+
+func _filter_line_edit_changed(text : String):
+	_filter_drop_down(text)
+	#TODO: This should really show the drop down list, but I think it's not possible to show it while retaining focus: 
+	#      I need to rewrite the dropdown as something else! Probably with an ItemList that hides on pick
 
 func _action_id_changed(index : int):
 	underlying_action.action_id = drop_down.text
