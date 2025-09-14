@@ -99,13 +99,16 @@ func _on_action_list_popup_pressed(id):
 
 func _add_entry():
 	add_default_entry(0)
+	set_selected(root.get_children()[0], 0)
 
 func _add_entry_above_or_below(is_below : bool):
 	if currently_selected == null:
 		return
 
 	var current_pos : int = currently_selected.get_index()
-	add_default_entry(current_pos + (1 if is_below else 0))
+	var add_at_index : int = current_pos + (1 if is_below else 0)
+	add_default_entry(add_at_index)
+	set_selected(root.get_children()[add_at_index], 0)
 
 func _duplicate_entries():
 	var selection : Array[TreeItem] = get_all_selected()
