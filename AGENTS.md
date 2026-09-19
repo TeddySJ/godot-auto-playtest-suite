@@ -55,6 +55,11 @@ The reusable addon is in `addons/auto_play_suite_editor/`. Files at the reposito
 - Keep generic addon code free of references to demo/game classes. Game-specific instructions, loggers, and evaluators belong in the adopting project.
 - Comments should explain integration constraints, non-obvious state transitions, or intentional limitations. Remove temporary debug prints and stale commented-out experiments when touching nearby code.
 
-## VALIDATION
-* Running Godot: If (and only if) you've made script changes, use `godot_console --headless --quit project.godot` to check for script compile errors. You might get errors regarding out-of-sandbox access to editor data, config and cache; ignore those and focus on script errors.
-- NOTE: The first time `godot_console --headless --quit project.godot` is run, it might fail with various cache-related errors and issues. If this happens, ignore the result of the first run, and run the command again
+## Validation
+
+- If, and only if, you have made script changes, run `godot_console --headless --quit project.godot` to check for script compile errors. The first run may fail because of editor-data, configuration, cache, certificate, or other environment-access issues. When that happens, run the command again and distinguish environment warnings from actual parse, type, or runtime script errors.
+- A compile-only launch is not sufficient for changes involving state transitions, sequencing, callbacks, queues, resource mutation, or asynchronous behavior. For those changes, create a small focused headless validation script inside the project, run it with `godot_console --headless --path . --script res://path/to/validation_script.gd`, and exercise the real production classes rather than a reimplementation of their logic.
+- Keep the validation scenario minimal. Register only the dependencies it needs, construct the smallest useful resources or nodes, drive the relevant lifecycle directly, and assert externally observable state after each important transition. Include normal behavior plus applicable boundary cases such as repeated entry, resume/re-entry, nesting, stale input state, completion, and shutdown.
+- Make the validation script print an unambiguous success marker and quit with a nonzero status when an assertion fails. Inspect the complete output as well as the exit code: deferred work can emit a script error after success was printed or after a quit was requested.
+- Keep a focused validation as a permanent regression test when it fits the repository's test organization. Otherwise, remove the temporary script after it passes and report the exact scenario that was exercised.
+- Finish by rerunning the compile check and `git diff --check`, then inspect the final diff and working-tree status for accidental files or unrelated edits.
