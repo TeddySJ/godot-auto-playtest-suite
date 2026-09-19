@@ -14,8 +14,11 @@ static func get_shared() -> AutoPlaySuiteLogStore:
 	root.set_meta("APS_LOG_STORE", s)
 	return s
 
-func handle_debugger_message(data: Array):
-	var main_dict : Dictionary = log_dictionary.get_or_add(AutoPlaySuite._get_plugin_singleton().currently_running_test.test_name, {})
+func handle_debugger_message(data: Array, test_key : String):
+	if test_key.is_empty():
+		printerr("Received an Auto Play Suite log message without a test identity.")
+		return
+	var main_dict : Dictionary = log_dictionary.get_or_add(test_key, {})
 	
 	var dict : Dictionary = main_dict.get_or_add(data[0], {})
 	
@@ -34,8 +37,6 @@ func handle_debugger_message(data: Array):
 		var failed_eval_dict = dict.get_or_add("Failed Evals", {})
 		var key : String = data[2]
 		failed_eval_dict[key] = data[3]
-
-	print("Dict Size: ", log_dictionary.size())
 
 func print_all_logs():
 	print("Dict Size: ", log_dictionary.size())

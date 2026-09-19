@@ -53,6 +53,14 @@ var test_has_exited_properly : bool = false
 
 var tests_to_run : Array[AutoPlaySuiteTestResource]
 var currently_running_test : AutoPlaySuiteTestResource = null
+var testing_in_progress : bool = false
+var running_test_series : bool = false
+var series_cancelled : bool = false
+var accumulated_test_results : Dictionary[String, bool] = {}
+var debugger_session_test_keys : Dictionary[int, String] = {}
+var debugger_session_run_ids : Dictionary[int, int] = {}
+var current_debugger_session_id : int = -1
+var current_test_run_id : int = 0
 
 var current_context : CurrentContext = CurrentContext.Running
 var is_in_editor : bool:
@@ -104,6 +112,8 @@ func _input(event: InputEvent) -> void:
 		return
 		
 	if current_test_view == null:
+		return
+	if testing_in_progress:
 		return
 		
 	if Input.is_action_pressed("ui_focus_next") && event.is_action_pressed("ui_cancel"):
@@ -196,8 +206,28 @@ func _setup_in_single_scene():
 func _setup_in_editor():
 	pass
 
-func _logger_message_received(data: Array):
-	logs.handle_debugger_message(data)
+func _debugger_session_started(session_id : int) -> void:
+	if currently_running_test == null:
+		return
+	# Godot reuses inactive debugger slots. A started signal is the authoritative
+	# boundary that assigns the session ID to the new run generation.
+	debugger_session_test_keys[session_id] = currently_running_test.get_identity_key()
+	debugger_session_run_ids[session_id] = current_test_run_id
+	current_debugger_session_id = session_id
+
+func _debugger_session_stopped(session_id : int) -> void:
+	if current_debugger_session_id == session_id:
+		current_debugger_session_id = -1
+
+func _logger_message_received(data: Array, session_id : int):
+	var test_key : String = debugger_session_test_keys.get(session_id, "")
+	if test_key.is_empty() && currently_running_test != null:
+		test_key = currently_running_test.get_identity_key()
+		debugger_session_test_keys[session_id] = test_key
+		debugger_session_run_ids[session_id] = current_test_run_id
+		if current_debugger_session_id == -1:
+			current_debugger_session_id = session_id
+	logs.handle_debugger_message(data, test_key)
 
 func _show_action_view():
 	_hide_all_right_side_elements()
@@ -233,18 +263,20 @@ func _set_file_dialog_size_and_position():
 
 func _load_test(path : String):
 	file_dialog = null
-	current_test_view.current_file_path = path
-	var test : AutoPlaySuiteTestResource = load(path)
+	var loaded_resource := load(path)
 	
-	if test == null:
+	if !(loaded_resource is AutoPlaySuiteTestResource):
 		printerr("Selected file was not a Test Resource!")
 		return
 	
+	var test : AutoPlaySuiteTestResource = loaded_resource
 	var new_test : AutoPlaySuiteTestResource = test.duplicate(true)
 	var uid_string : String = ResourceUID.id_to_text(ResourceSaver.get_resource_id_for_path(path))
 	new_test.test_uid = uid_string
-	test_series_view.add_test(new_test)
+	if !test_series_view.add_test(new_test):
+		return
 	test_series_view._update_path_to_current_test(uid_string)
+	current_test_view.current_file_path = uid_string
 	
 	#var uid_string : String = ResourceUID.id_to_text(ResourceSaver.get_resource_id_for_path(path))
 	#test_series_view._update_path_to_current_test(uid_string)
@@ -288,6 +320,9 @@ func _run_selected_action():
 		AutoPlaySuiteActionLibrary.possible_actions[action_view.underlying_action.action_id].on_enter.call(action_view.underlying_action)
 
 func _run_current_test():
+	if testing_in_progress:
+		printerr("A test run is already in progress.")
+		return
 	if current_test_view.current_file_path == "":
 		printerr("Test must be saved to file before running it!")
 		return
@@ -295,12 +330,23 @@ func _run_current_test():
 	if !current_test_view._save_test():
 		return
 	
-	_prepare_for_testing()
+	_prepare_for_testing(false)
 	
 	_run_single_test(current_test_view.current_test, _end_testing)
 	
 
-func _prepare_for_testing():
+func _prepare_for_testing(is_series : bool):
+	testing_in_progress = true
+	running_test_series = is_series
+	series_cancelled = false
+	accumulated_test_results.clear()
+	debugger_session_test_keys.clear()
+	debugger_session_run_ids.clear()
+	current_debugger_session_id = -1
+	current_test_run_id = 0
+	test_series_view.set_testing_in_progress(true)
+	current_test_view.set_testing_in_progress(true)
+	action_view.set_testing_in_progress(true)
 	logs.clear_logs()
 	_setup_environment_for_testing()
 
@@ -308,19 +354,31 @@ func _end_testing():
 	_load_log_of_current_test()
 	_show_logger()
 	_restore_environment_after_testing()
+	tests_to_run.clear()
 	currently_running_test = null
+	testing_in_progress = false
+	running_test_series = false
+	test_series_view.set_testing_in_progress(false)
+	current_test_view.set_testing_in_progress(false)
+	action_view.set_testing_in_progress(false)
 
 func _on_test_ended(test : AutoPlaySuiteTestResource):
-	signal_on_test_passed_or_failed_evaluation.emit(test, _test_passed(test))
+	var test_key := test.get_identity_key()
+	var success := _test_passed(test)
+	if accumulated_test_results.has(test_key):
+		success = accumulated_test_results[test_key] && success
+	accumulated_test_results[test_key] = success
+	signal_on_test_passed_or_failed_evaluation.emit(test, success)
 
 func _test_passed(test : AutoPlaySuiteTestResource) -> bool:
 	if !test_has_exited_properly && test.premature_end_is_error:
 		return false
 	
-	if !logs.log_dictionary.has(test.test_name):
+	var test_key := test.get_identity_key()
+	if !logs.log_dictionary.has(test_key):
 		return true
 	
-	var log_dict : Dictionary = logs.log_dictionary[test.test_name]
+	var log_dict : Dictionary = logs.log_dictionary[test_key]
 	
 	if log_dict.has(&"Default Logger"):
 		var def_log : Dictionary = log_dict[&"Default Logger"]
@@ -329,17 +387,20 @@ func _test_passed(test : AutoPlaySuiteTestResource) -> bool:
 	return true
 
 func _load_log_of_current_test():
-	if !logs.log_dictionary.has(current_test_view.current_test.test_name):
+	var test_key := current_test_view.current_test.get_identity_key()
+	if !logs.log_dictionary.has(test_key):
 		logs_view.set_data({"No Data":"Please run test to generate log data"})
 		return
 	
-	logs_view.set_data(logs.log_dictionary[current_test_view.current_test.test_name])
+	logs_view.set_data(logs.log_dictionary[test_key])
 
 func _setup_environment_for_testing():
 	OS.set_environment("DoAutoTesting", "true")
 
 func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finished : Callable):
 	currently_running_test = test_resource
+	current_test_run_id += 1
+	current_debugger_session_id = -1
 	var path := test_series_view._get_test_uid_path(test_resource)
 	_set_current_test_file_path_environment(path)
 	test_has_exited_properly = false
@@ -348,7 +409,14 @@ func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finishe
 	await _wait_until_game_exits()
 	
 	_on_test_ended(test_resource)
+	if _should_cancel_series_after_test(test_resource):
+		series_cancelled = true
 	call_on_finished.call()
+
+func _should_cancel_series_after_test(test_resource : AutoPlaySuiteTestResource) -> bool:
+	# Godot does not distinguish editor Stop, a crash, and an allowed direct exit.
+	# Abort only when the test declares an unexpected exit to be an error.
+	return running_test_series && !test_has_exited_properly && test_resource.premature_end_is_error
 
 func _set_current_test_file_path_environment(path : String):
 	OS.set_environment("AutoTestPath", path)
@@ -358,6 +426,9 @@ func _restore_environment_after_testing():
 	OS.set_environment("AutoTestPath", "")
 
 func _run_all_tests():
+	if testing_in_progress:
+		printerr("A test run is already in progress.")
+		return
 	tests_to_run.clear()
 	tests_to_run.append_array(test_series_view._get_all_tests_in_order())
 	for test in tests_to_run:
@@ -367,11 +438,11 @@ func _run_all_tests():
 				printerr("Cannot run test '%s': %s" % [test.test_name, error])
 			return
 	
-	_prepare_for_testing()
+	_prepare_for_testing(true)
 	_run_next_test()
 
 func _run_next_test():
-	if tests_to_run.size() == 0:
+	if series_cancelled || tests_to_run.size() == 0:
 		_end_testing()
 		return
 	
@@ -402,9 +473,15 @@ func _on_action_list_item_selected(action_resource):
 func _on_current_test_saved(uid_string : String):
 	test_series_view._update_path_to_current_test(uid_string)
 
-func _system_message_received(data : Array):
+func _system_message_received(data : Array, session_id : int):
 	if data.size() == 0:
 		return
+	if current_debugger_session_id == -1 && currently_running_test != null:
+		if debugger_session_run_ids.has(session_id) && debugger_session_run_ids[session_id] != current_test_run_id:
+			return
+		debugger_session_test_keys[session_id] = currently_running_test.get_identity_key()
+		debugger_session_run_ids[session_id] = current_test_run_id
+		current_debugger_session_id = session_id
 	
-	if data[0] == &"ExitThroughTestAction":
+	if data[0] == &"ExitThroughTestAction" && session_id == current_debugger_session_id:
 		test_has_exited_properly = true

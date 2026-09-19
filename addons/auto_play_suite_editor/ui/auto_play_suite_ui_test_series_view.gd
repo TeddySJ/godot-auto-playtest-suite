@@ -26,6 +26,7 @@ var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 
 var current_selected_index : int = -1
 var current_test_series : AutoPlaySuiteTestSeriesResource
+var testing_in_progress : bool = false
 
 signal signal_on_current_test_series_saved
 signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
@@ -131,10 +132,13 @@ func _ready() -> void:
 	add_child(remove_test_button)
 
 func _new_series_button_pressed():
+	if testing_in_progress:
+		return
 	clear()
-	_randomize_test_series_name()
 	current_selected_index = -1
+	current_file_path = ""
 	current_test_series = AutoPlaySuiteTestSeriesResource.new()
+	_randomize_test_series_name()
 	signal_on_new_series.emit()
 
 func _can_save_series(output_error_reason : bool = true) -> bool:
@@ -150,6 +154,16 @@ func _can_save_series(output_error_reason : bool = true) -> bool:
 			ret = false
 			err = "All tests must be saved to disk before the series can be saved!"
 			break
+
+	if current_test_series.number_of_runs_per_test.size() != current_test_series.paths_to_tests.size():
+		ret = false
+		err = "Every test in the series must have a run count."
+	else:
+		for run_count in current_test_series.number_of_runs_per_test:
+			if run_count < 1:
+				ret = false
+				err = "Test run counts must be at least one."
+				break
 	
 	
 	if output_error_reason && !ret:
@@ -157,26 +171,27 @@ func _can_save_series(output_error_reason : bool = true) -> bool:
 	
 	return ret
 
-func _save_test_series(path : String = ""):
+func _save_test_series(path : String = "") -> bool:
 	if file_dialog != null:
-		return
+		return false
 	
 	if !_can_save_series():
-		return
+		return false
 	
 	if path == "":
 		if current_file_path == "":
 			_save_test_series_as()
-			return
+			return false
 		path = current_file_path
 	
-	current_file_path = path
-	
-	print(current_test_series.paths_to_tests.size())
-	
 	current_test_series.take_over_path(path)
-	ResourceSaver.save(current_test_series, path)
+	var save_error := ResourceSaver.save(current_test_series, path)
+	if save_error != OK:
+		printerr("Failed to save test series to '%s': error %d" % [path, save_error])
+		return false
+	current_file_path = path
 	signal_on_current_test_series_saved.emit()
+	return true
 
 func _save_test_series_as():
 	if file_dialog != null:
@@ -211,14 +226,15 @@ func _load_series_button_pressed():
 
 func _load_series(path : String):
 	file_dialog = null
-	var series : AutoPlaySuiteTestSeriesResource = load(path)
+	var loaded_resource := load(path)
 	
-	if series == null:
+	if !(loaded_resource is AutoPlaySuiteTestSeriesResource):
 		printerr("The loaded file is not a Test Series Resource")
 		return
 
-	current_file_path = path
-	_set_current_series(series.duplicate(true))
+	var series : AutoPlaySuiteTestSeriesResource = loaded_resource.duplicate(true)
+	if _set_current_series(series):
+		current_file_path = path
 
 func _file_dialog_canceled():
 	file_dialog = null
@@ -227,23 +243,50 @@ func _set_file_dialog_size_and_position():
 	file_dialog.min_size = Vector2(600, 400) * AutoPlaySuite._get_plugin_singleton().editor_scale
 	file_dialog.position = global_position
 
-func _set_current_series(new_series : AutoPlaySuiteTestSeriesResource):
+func _set_current_series(new_series : AutoPlaySuiteTestSeriesResource) -> bool:
+	if new_series.paths_to_tests.is_empty():
+		printerr("Cannot load an empty test series.")
+		return false
+	if new_series.number_of_runs_per_test.is_empty():
+		for _path in new_series.paths_to_tests:
+			new_series.number_of_runs_per_test.append(1)
+	elif new_series.number_of_runs_per_test.size() != new_series.paths_to_tests.size():
+		printerr("Cannot load a test series whose run counts do not match its tests.")
+		return false
+	for run_count in new_series.number_of_runs_per_test:
+		if run_count < 1:
+			printerr("Cannot load a test series with a run count below one.")
+			return false
+
+	var loaded_tests : Array[AutoPlaySuiteTestResource] = []
+	var seen_test_ids : Dictionary[String, bool] = {}
+	for path in new_series.paths_to_tests:
+		if path.is_empty():
+			printerr("Cannot load a test series containing an unsaved test.")
+			return false
+		var loaded_resource := load(path)
+		if !(loaded_resource is AutoPlaySuiteTestResource):
+			printerr("Could not load test resource from '%s'." % path)
+			return false
+		var test : AutoPlaySuiteTestResource = loaded_resource.duplicate(true)
+		if path.begins_with("uid://"):
+			test.test_uid = path
+		var test_id := test.test_uid if !test.test_uid.is_empty() else path
+		if seen_test_ids.has(test_id):
+			printerr("Test series contains the same test more than once: '%s'." % path)
+			return false
+		seen_test_ids[test_id] = true
+		loaded_tests.append(test)
+
 	clear()
+	current_selected_index = -1
 	current_test_series = new_series
 	test_series_name_input.text = current_test_series.test_series_name
-	print(current_test_series.paths_to_tests.size())
-	for path in current_test_series.paths_to_tests:
-		var res : AutoPlaySuiteTestResource = load(path)
-		if res == null:
-			printerr("Loaded Test in Test Series was not a test?!")
-		else:
-			print(res.test_uid)
-			add_test(res, false)
-	
-	if test_button_list.size() == 0:
-		return
+	for test in loaded_tests:
+		add_test(test, false)
 	
 	_test_button_pressed(test_button_list[0])
+	return true
 
 func _test_series_name_changed(new_text : String):
 	current_test_series.test_series_name = new_text
@@ -278,12 +321,16 @@ func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = 
 	
 	if add_to_series:
 		current_test_series.paths_to_tests.append("")
+		current_test_series.number_of_runs_per_test.append(1)
 		_test_button_pressed(button)
 	
 	return true
 
 func _on_test_failed_or_passed_test(test : AutoPlaySuiteTestResource, success : bool):
 	var index : int = _get_index_of_test(test)
+	if index == -1:
+		printerr("Could not find the completed test in the current series.")
+		return
 	if !success:
 		test_button_list[index].modulate = Color.RED
 	else:
@@ -291,26 +338,37 @@ func _on_test_failed_or_passed_test(test : AutoPlaySuiteTestResource, success : 
 		
 
 func _remove_test_button_pressed():
+	if current_selected_index < 0 || current_selected_index >= test_button_list.size():
+		printerr("Cannot remove a test without a valid series selection.")
+		return
+
+	var removed_index := current_selected_index
+	var removed_button := test_button_list[removed_index]
 	current_test_series.paths_to_tests.remove_at(current_selected_index)
-	test_button_list[current_selected_index].queue_free()
+	current_test_series.number_of_runs_per_test.remove_at(current_selected_index)
+	underlying_dictionary.erase(removed_button)
+	removed_button.queue_free()
 	test_button_list.remove_at(current_selected_index)
-	
-	if current_selected_index > 0:
-		current_selected_index -= 1
 	
 	if test_button_list.size() == 0:
 		_on_all_tests_removed()
 		return
 	
-	_test_button_pressed(test_button_list[0])
+	var next_index := mini(removed_index, test_button_list.size() - 1)
+	_test_button_pressed(test_button_list[next_index])
 
 func _on_all_tests_removed():
-	print("All tests removed!")
+	current_selected_index = -1
+	signal_on_new_test_button_pressed.emit()
 
 func _on_run_current_test_button_pressed():
+	if testing_in_progress:
+		return
 	signal_on_run_current_test_pressed.emit()
 
 func _on_run_all_tests_button_pressed():
+	if testing_in_progress:
+		return
 	for uid in current_test_series.paths_to_tests:
 		if uid == "":
 			printerr("One or more of the tests in the series has not been saved to disk yet!")
@@ -341,18 +399,21 @@ func _restore_selected_test(index : int) -> void:
 
 func _get_all_tests_in_order() -> Array[AutoPlaySuiteTestResource]:
 	var ret : Array[AutoPlaySuiteTestResource] = []
-	for button in test_button_list:
-		ret.append(underlying_dictionary[button])
+	for index in test_button_list.size():
+		var test : AutoPlaySuiteTestResource = underlying_dictionary[test_button_list[index]]
+		for _run_number in current_test_series.number_of_runs_per_test[index]:
+			ret.append(test)
 	
 	return ret
 
 func _get_index_of_test(test_resource : AutoPlaySuiteTestResource) -> int:
-	var index : int = -1
 	for n in test_button_list.size():
-		if test_resource.test_name == underlying_dictionary[test_button_list[n]].test_name:
-			index = n
-			break
-	return index
+		var candidate : AutoPlaySuiteTestResource = underlying_dictionary[test_button_list[n]]
+		if candidate == test_resource:
+			return n
+		if !test_resource.test_uid.is_empty() && candidate.test_uid == test_resource.test_uid:
+			return n
+	return -1
 
 func _get_test_uid_path(test_resource : AutoPlaySuiteTestResource) -> String:
 	var index : int = _get_index_of_test(test_resource)
@@ -363,6 +424,8 @@ func _get_test_uid_path(test_resource : AutoPlaySuiteTestResource) -> String:
 	return uid
 
 func _test_button_pressed(button_pressed : Button):
+	if testing_in_progress:
+		return
 	for button in test_button_list:
 		button.disabled = false
 	current_selected_index = test_button_list.find(button_pressed)
@@ -373,6 +436,9 @@ func _change_to_test(test_resource : AutoPlaySuiteTestResource):
 	signal_on_test_changed.emit(test_resource)
 
 func _update_path_to_current_test(new_path : String):
+	if current_selected_index < 0 || current_selected_index >= current_test_series.paths_to_tests.size():
+		printerr("Cannot update a test path without a valid series selection.")
+		return
 	current_test_series.paths_to_tests[current_selected_index] = new_path
 
 func clear():
@@ -380,4 +446,19 @@ func clear():
 		button.queue_free()
 	test_button_list.clear()
 	underlying_dictionary.clear()
+
+func set_testing_in_progress(in_progress : bool) -> void:
+	testing_in_progress = in_progress
+	test_series_name_input.editable = !in_progress
+	new_series_button.disabled = in_progress
+	load_series_button.disabled = in_progress
+	save_series_button.disabled = in_progress
+	save_series_as_button.disabled = in_progress
+	remove_test_button.disabled = in_progress
+	load_test_button.disabled = in_progress
+	new_test_button.disabled = in_progress
+	run_current_test_button.disabled = in_progress
+	run_all_tests_button.disabled = in_progress
+	for index in test_button_list.size():
+		test_button_list[index].disabled = in_progress || index == current_selected_index
 	

@@ -9,6 +9,11 @@ class_name AutoPlaySuiteTestResource
 
 @export var premature_end_is_error : bool = false
 
+func get_identity_key() -> String:
+	if !test_uid.is_empty():
+		return test_uid
+	return "instance://%d" % get_instance_id()
+
 func get_validation_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	if actions.is_empty():

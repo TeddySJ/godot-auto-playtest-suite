@@ -191,6 +191,12 @@ func _update_text_fields():
 func _select_in_drop_down(item_name : StringName):
 	var drop_down_id : int = backing_dictionary[item_name]
 	var ind = drop_down.get_item_index(drop_down_id)
-	print(drop_down_id, ":", ind)
 	drop_down.select(ind)
+
+func set_testing_in_progress(in_progress : bool) -> void:
+	filter_line_edit.editable = !in_progress
+	drop_down.disabled = in_progress
+	float_var_spinbox.editable = !in_progress
+	string_var_line_edit.editable = !in_progress
+	timeout_spinbox.editable = !in_progress
 	

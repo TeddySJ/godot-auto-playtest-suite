@@ -275,5 +275,15 @@ func handle_input(event: InputEvent) -> void:
 	else:
 		post_action_list.handle_input(event)
 
+func set_testing_in_progress(in_progress : bool) -> void:
+	test_name_field.editable = !in_progress
+	premature_end_is_error.disabled = in_progress
+	main_actions_button.disabled = in_progress || current_list == CurrentList.Main
+	post_actions_button.disabled = in_progress || current_list == CurrentList.Post
+	save_test_button.disabled = in_progress
+	save_test_as_button.disabled = in_progress
+	action_list.mouse_filter = Control.MOUSE_FILTER_IGNORE if in_progress else Control.MOUSE_FILTER_STOP
+	post_action_list.mouse_filter = Control.MOUSE_FILTER_IGNORE if in_progress else Control.MOUSE_FILTER_STOP
+
 func _toggled_premature_end_is_error(on : bool):
 	current_test.premature_end_is_error = on
