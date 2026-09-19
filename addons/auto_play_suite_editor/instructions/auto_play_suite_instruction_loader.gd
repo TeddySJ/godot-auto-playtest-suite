@@ -4,6 +4,7 @@ class_name AutoPlaySuiteInstructionLoader
 static var refs : Array = []
 
 static func LoadAllInstructions():
+	_unload_all_instructions()
 	refs.clear()
 	AutoPlaySuiteActionLibrary.clear_library()
 	var global_classes := ProjectSettings.get_global_class_list()
@@ -19,6 +20,11 @@ static func LoadAllInstructions():
 				refs.append(instance)
 			else:
 				printerr("Could not find the expected 'hook_into_suite' method in the class ", c_name, "!")
+
+static func _unload_all_instructions() -> void:
+	for instance in refs:
+		if is_instance_valid(instance) && instance.has_method(&"unhook_from_suite"):
+			instance.call(&"unhook_from_suite")
 
 static func _sort_classes_by_name(a : Dictionary, b : Dictionary) -> bool:
 	return String(a["class"]) < String(b["class"])

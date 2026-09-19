@@ -8,3 +8,8 @@ func setup():
 	forward_output_to_editor = true
 	logger_name = "Autoplay Log"
 	write_to_output("Created Logger!")
+
+func _exit_tree() -> void:
+	if Singleton == self:
+		Singleton = null
+	super._exit_tree()

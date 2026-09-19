@@ -39,6 +39,10 @@ func _ready() -> void:
 		people_alive.append(name)
 	_write_to_log(str("Det var en gång ", peeps))
 
+func _exit_tree() -> void:
+	if Singleton == self:
+		Singleton = null
+
 func _write_to_log(message : String):
 	waiting_for_messages = max(0, waiting_for_messages - 1)
 	log.push_front(message)

@@ -83,18 +83,25 @@ var should_handle_input : bool:
 signal signal_on_test_passed_or_failed_evaluation(test, success)
 
 static func set_and_show_popup(new_popup : Popup):
-	if shared_popup != null:
+	if is_instance_valid(shared_popup):
 		shared_popup.hide()
-		shared_popup = null
+	shared_popup = null
+	if !is_instance_valid(new_popup):
+		return
 	shared_popup = new_popup
 	shared_popup.show()
 	
 static func _get_plugin_singleton() -> AutoPlaySuite:
 	var root := EditorInterface.get_base_control()
-	return root.get_meta("APS_EDITOR")
+	var instance : AutoPlaySuite = root.get_meta("APS_EDITOR", null)
+	return instance if is_instance_valid(instance) else null
 
 func _enter_tree() -> void:
 	pass
+
+func _exit_tree() -> void:
+	if !is_instance_valid(shared_popup) || is_ancestor_of(shared_popup):
+		shared_popup = null
 
 func _register_plugin_singleton():
 	var root := EditorInterface.get_base_control()
@@ -270,7 +277,7 @@ func _set_file_dialog_size_and_position():
 
 func _load_test(path : String):
 	file_dialog = null
-	var loaded_resource := load(path)
+	var loaded_resource := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP)
 	
 	if !(loaded_resource is AutoPlaySuiteTestResource):
 		printerr("Selected file was not a Test Resource!")

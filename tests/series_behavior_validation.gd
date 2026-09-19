@@ -72,6 +72,19 @@ func _run_validation() -> void:
 	_assert_true(!view._set_current_series(duplicate_series), "A series containing the same test twice should be rejected.")
 	_assert_true(view.current_test_series == accepted_series && view.test_button_list.size() == 3, "A rejected series should not disturb the active series.")
 
+	var cache_test_path := "user://auto_play_suite_cache_validation_%d.test.tres" % OS.get_process_id()
+	var disk_test := _make_test("Disk Snapshot", "")
+	_assert_true(ResourceSaver.save(disk_test, cache_test_path) == OK, "The cache validation resource should save successfully.")
+	var cached_test : AutoPlaySuiteTestResource = load(cache_test_path)
+	cached_test.test_name = "Unsaved Cached Mutation"
+	var cache_series := AutoPlaySuiteTestSeriesResource.new()
+	cache_series.paths_to_tests = [cache_test_path]
+	cache_series.number_of_runs_per_test = [1]
+	_assert_true(view._set_current_series(cache_series), "A series should load a test that already exists in the resource cache.")
+	var freshly_loaded_test : AutoPlaySuiteTestResource = view.underlying_dictionary[view.test_button_list[0]]
+	_assert_true(freshly_loaded_test.test_name == "Disk Snapshot", "Loading a series should read the saved test instead of cached unsaved mutations.")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(cache_test_path))
+
 	view.set_testing_in_progress(true)
 	_assert_true(view.testing_in_progress, "The series view should enter its testing state.")
 	_assert_true(view.run_all_tests_button.disabled && view.remove_test_button.disabled, "Run and mutation controls should be disabled during testing.")
@@ -121,7 +134,11 @@ func _run_validation() -> void:
 	startup_probe.run_started = false
 	startup_probe.simulated_game_running = true
 	_assert_true(!await startup_probe._wait_until_run_starts(1), "A runtime that never acknowledges startup should time out.")
-	startup_probe.queue_free()
+	var popup := Popup.new()
+	startup_probe.add_child(popup)
+	AutoPlaySuite.shared_popup = popup
+	startup_probe.free()
+	_assert_true(AutoPlaySuite.shared_popup == null, "Freeing the editor UI should clear its shared popup reference.")
 
 	editor.currently_running_test = next_test
 	editor.current_test_run_id = 2

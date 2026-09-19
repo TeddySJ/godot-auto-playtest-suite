@@ -9,16 +9,35 @@ var game : Game
 var people_last : int = 0
 
 func setup():
-	game = Game.Singleton
-	people_last = game.people_alive.size()
-	game.signal_on_write_to_log.connect(_on_game_message)
 	forward_output_to_editor = true
 	logger_name = "Logger of Life"
 	write_to_output("Created Logger!")
+	_connect_to_current_game()
+	if !is_instance_valid(game):
+		return
 	var participants : String = "Participants: "
-	for person in Game.Singleton.people_alive:
+	for person in game.people_alive:
 		participants += str(person, " ")
 	write_to_output(participants)
+
+func _exit_tree() -> void:
+	_disconnect_from_game()
+	super._exit_tree()
+
+func _connect_to_current_game() -> void:
+	var current_game := Game.Singleton
+	if !is_instance_valid(current_game) || current_game.is_queued_for_deletion() || current_game == game:
+		return
+	_disconnect_from_game()
+	game = current_game
+	people_last = game.people_alive.size()
+	if !game.signal_on_write_to_log.is_connected(_on_game_message):
+		game.signal_on_write_to_log.connect(_on_game_message)
+
+func _disconnect_from_game() -> void:
+	if is_instance_valid(game) && game.signal_on_write_to_log.is_connected(_on_game_message):
+		game.signal_on_write_to_log.disconnect(_on_game_message)
+	game = null
 
 func _on_game_message(message : String):
 	write_to_output(message)
@@ -28,7 +47,8 @@ func _on_game_message(message : String):
 		
 
 func _process(delta: float) -> void:
-	pass
+	if !is_instance_valid(game) || game != Game.Singleton:
+		_connect_to_current_game()
 
 func _on_instruction(action_resource : AutoPlaySuiteActionResource):
 	if action_resource.float_var == 0:

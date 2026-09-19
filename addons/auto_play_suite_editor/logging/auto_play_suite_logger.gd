@@ -13,6 +13,11 @@ var logger_name : String = "[Undefined Logger]"
 func _ready() -> void:
 	setup()
 
+func _exit_tree() -> void:
+	for c_name in CreatedLoggers.keys():
+		if CreatedLoggers[c_name] == self:
+			CreatedLoggers.erase(c_name)
+
 func setup():
 	pass
 
@@ -40,18 +45,24 @@ func log_to_list_entry(key : String, data, also_to_output : bool):
 		write_to_output(data)
 
 static func get_default_logger() -> AutoPlaySuiteDefaultLogger:
+	if !is_instance_valid(AutoPlaySuiteDefaultLogger.Singleton) || AutoPlaySuiteDefaultLogger.Singleton.is_queued_for_deletion():
+		AutoPlaySuiteDefaultLogger.Singleton = null
 	return AutoPlaySuiteDefaultLogger.Singleton
 
-static func get_logger_by_class_name(c_name : String) -> Object:
-	if !CreatedLoggers.has(c_name):
+static func get_logger_by_class_name(c_name : String) -> AutoPlaySuiteLogger:
+	var logger : AutoPlaySuiteLogger = CreatedLoggers.get(c_name)
+	if !is_instance_valid(logger) || logger.is_queued_for_deletion():
+		CreatedLoggers.erase(c_name)
 		printerr("Tried to find a logger that hasn't been instantiated: ", c_name)
 		return null
-	return CreatedLoggers[c_name]
+	return logger
 
-static func instantiate_by_class_name(c_name: String) -> Object:
-	if CreatedLoggers.has(c_name):
+static func instantiate_by_class_name(c_name: String) -> AutoPlaySuiteLogger:
+	var existing_logger : AutoPlaySuiteLogger = CreatedLoggers.get(c_name)
+	if is_instance_valid(existing_logger) && !existing_logger.is_queued_for_deletion():
 		printerr("Tried instancing two loggers of the class ", c_name, "! There can only be one per logger type.")
-		return
+		return null
+	CreatedLoggers.erase(c_name)
 	
 	for entry in ProjectSettings.get_global_class_list():
 		if entry["class"] == c_name:
@@ -63,3 +74,10 @@ static func instantiate_by_class_name(c_name: String) -> Object:
 			else:
 				printerr("Tried instancing the class ", c_name, " but it was not present in the global class list!")
 	return null
+
+static func clear_created_loggers() -> void:
+	var loggers := CreatedLoggers.values()
+	CreatedLoggers.clear()
+	for logger in loggers:
+		if is_instance_valid(logger) && !logger.is_queued_for_deletion():
+			logger.queue_free()

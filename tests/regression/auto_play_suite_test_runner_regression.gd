@@ -20,6 +20,16 @@ class RecordingRunner extends AutoPlaySuiteTestRunner:
 	func _quit_after_debugger_flush(exit_code : int) -> void:
 		recorded_exit_code = exit_code
 
+class InstructionTeardownProbe extends RefCounted:
+	var unhook_count : int = 0
+
+	func unhook_from_suite() -> void:
+		unhook_count += 1
+
+class GameSingletonProbe extends Game:
+	func _ready() -> void:
+		Singleton = self
+
 func _initialize() -> void:
 	OS.set_environment("AutoTestRunToken", "runner-regression")
 	_run_regressions.call_deferred()
@@ -34,6 +44,13 @@ func _run_regressions() -> void:
 	_test_normal_quit_runs_post_actions_with_zero_exit()
 	_test_failed_post_action_continues_cleanup()
 	_test_reused_interrupt_drops_runtime_state()
+	_test_runner_singleton_recovers_after_free()
+	_test_default_logger_singleton_clears_on_exit()
+	_test_runtime_registries_drop_exited_nodes()
+	_test_runtime_registry_cleanup_resets_state()
+	_test_instruction_reload_unhooks_previous_instances()
+	_test_evaluator_aliases_share_one_registry_entry()
+	_test_demo_game_singleton_clears_on_exit()
 
 	if failures == 0:
 		print("AUTO_PLAY_SUITE_RUNNER_REGRESSION: PASS")
@@ -154,14 +171,77 @@ func _test_reused_interrupt_drops_runtime_state() -> void:
 	_expect(interrupt_copy.runtime_data.is_empty(), "The duplicated interrupt should not retain runtime data.")
 	_destroy_runner(runner)
 
+func _test_runner_singleton_recovers_after_free() -> void:
+	var first_runner := _create_runner()
+	first_runner.free()
+	_expect(AutoPlaySuiteTestRunner.Singleton == null, "Freeing the runner should clear its singleton reference.")
+	var replacement := AutoPlaySuiteTestRunner.instance()
+	_expect(is_instance_valid(replacement), "The runner singleton should be recreated after the previous runner is freed.")
+	_expect(AutoPlaySuiteTestRunner.Singleton == replacement, "The replacement runner should become the singleton.")
+	_destroy_runner(replacement)
+
+func _test_default_logger_singleton_clears_on_exit() -> void:
+	var logger := AutoPlaySuiteDefaultLogger.new()
+	root.add_child(logger)
+	_expect(AutoPlaySuiteDefaultLogger.Singleton == logger, "A ready default logger should become the singleton.")
+	logger.free()
+	_expect(AutoPlaySuiteDefaultLogger.Singleton == null, "Freeing the default logger should clear its singleton reference.")
+
+func _test_runtime_registries_drop_exited_nodes() -> void:
+	var logger := AutoPlaySuiteLogger.new()
+	AutoPlaySuiteLogger.CreatedLoggers["RegressionLogger"] = logger
+	root.add_child(logger)
+	logger.free()
+	_expect(!AutoPlaySuiteLogger.CreatedLoggers.has("RegressionLogger"), "A logger leaving the tree should unregister itself.")
+	var evaluator := AutoPlaySuiteEvaluator.new()
+	AutoPlaySuiteEvaluator.CreatedEvaluators["RegressionEvaluator"] = evaluator
+	root.add_child(evaluator)
+	evaluator.free()
+	_expect(!AutoPlaySuiteEvaluator.CreatedEvaluators.has("RegressionEvaluator"), "An evaluator leaving the tree should unregister itself.")
+
+func _test_runtime_registry_cleanup_resets_state() -> void:
+	var logger := AutoPlaySuiteLogger.new()
+	AutoPlaySuiteLogger.CreatedLoggers["RegressionLogger"] = logger
+	root.add_child(logger)
+	var evaluator := AutoPlaySuiteEvaluator.new()
+	AutoPlaySuiteEvaluator.CreatedEvaluators["RegressionEvaluator"] = evaluator
+	root.add_child(evaluator)
+	AutoPlaySuiteEvaluator.failed_evaluations = 3
+	AutoPlaySuiteLogger.clear_created_loggers()
+	AutoPlaySuiteEvaluator.clear_created_evaluators()
+	_expect(AutoPlaySuiteLogger.CreatedLoggers.is_empty(), "Logger cleanup should clear the registry.")
+	_expect(AutoPlaySuiteEvaluator.CreatedEvaluators.is_empty(), "Evaluator cleanup should clear the registry.")
+	_expect(logger.is_queued_for_deletion(), "Logger cleanup should schedule registered nodes for deletion.")
+	_expect(evaluator.is_queued_for_deletion(), "Evaluator cleanup should schedule registered nodes for deletion.")
+	_expect(AutoPlaySuiteEvaluator.failed_evaluations == 0, "Evaluator cleanup should reset per-run failure numbering.")
+
+func _test_instruction_reload_unhooks_previous_instances() -> void:
+	var probe := InstructionTeardownProbe.new()
+	AutoPlaySuiteInstructionLoader.refs = [probe]
+	AutoPlaySuiteInstructionLoader.LoadAllInstructions()
+	_expect(probe.unhook_count == 1, "Reloading instructions should unhook the previous instruction instances exactly once.")
+
+func _test_evaluator_aliases_share_one_registry_entry() -> void:
+	AutoPlaySuiteEvaluator.clear_created_evaluators()
+	var evaluator := AutoPlaySuiteEvaluator.instantiate_by_class_name("GameOfLife")
+	_expect(evaluator != null, "The evaluator should be creatable through its short name.")
+	_expect(AutoPlaySuiteEvaluator.get_evaluator_by_class_name("AutoPlaySuiteCustomEvaluator_GameOfLife") == evaluator, "The full evaluator name should resolve the short-name instance.")
+	_expect(AutoPlaySuiteEvaluator.instantiate_by_class_name("AutoPlaySuiteCustomEvaluator_GameOfLife") == null, "The full evaluator name should not create a second instance.")
+	AutoPlaySuiteEvaluator.clear_created_evaluators()
+
+func _test_demo_game_singleton_clears_on_exit() -> void:
+	var game := GameSingletonProbe.new()
+	root.add_child(game)
+	_expect(Game.Singleton == game, "A ready game should become the demo singleton.")
+	game.free()
+	_expect(Game.Singleton == null, "Freeing the game should clear the demo singleton.")
+
 func _create_runner() -> RecordingRunner:
 	var runner := RecordingRunner.new()
 	root.add_child(runner)
 	return runner
 
-func _destroy_runner(runner : RecordingRunner) -> void:
-	if AutoPlaySuiteTestRunner.Singleton == runner:
-		AutoPlaySuiteTestRunner.Singleton = null
+func _destroy_runner(runner : AutoPlaySuiteTestRunner) -> void:
 	runner.free()
 
 func _create_test(main_action_ids : Array[StringName], post_action_ids : Array[StringName]) -> AutoPlaySuiteTestResource:

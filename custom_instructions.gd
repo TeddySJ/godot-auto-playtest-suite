@@ -13,17 +13,27 @@ var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefi
 func hook_into_suite():
 	AutoPlaySuiteActionLibrary.add_actions_to_library(instruction_dictionary)
 
+func unhook_from_suite() -> void:
+	if is_instance_valid(Game.Singleton) && Game.Singleton.signal_on_population_changed.is_connected(_on_population_changed):
+		Game.Singleton.signal_on_population_changed.disconnect(_on_population_changed)
+
 #region == Replace these with the actions unique to your game ==
 
 func _kill(arguments : AutoPlaySuiteActionResource):
+	if !is_instance_valid(Game.Singleton) || Game.Singleton.is_queued_for_deletion():
+		arguments.fail("The Game singleton is unavailable.")
+		return
 	Game.Singleton._kill_random()
-	if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
+	if is_instance_valid(AutoPlaySuiteCustomLogger_AutoLog.Singleton) && !AutoPlaySuiteCustomLogger_AutoLog.Singleton.is_queued_for_deletion():
 		AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Killed somebody!")
 	arguments.finished = true
 
 func _make_love(arguments : AutoPlaySuiteActionResource):
+	if !is_instance_valid(Game.Singleton) || Game.Singleton.is_queued_for_deletion():
+		arguments.fail("The Game singleton is unavailable.")
+		return
 	Game.Singleton._procreate_random()
-	if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
+	if is_instance_valid(AutoPlaySuiteCustomLogger_AutoLog.Singleton) && !AutoPlaySuiteCustomLogger_AutoLog.Singleton.is_queued_for_deletion():
 		AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Created life!")
 	arguments.finished = true
 
@@ -32,7 +42,7 @@ func _kill_or_love(arguments : AutoPlaySuiteActionResource):
 	arguments.finished = true
 
 func _perform_kill_or_love(arguments : AutoPlaySuiteActionResource):
-	if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
+	if is_instance_valid(AutoPlaySuiteCustomLogger_AutoLog.Singleton) && !AutoPlaySuiteCustomLogger_AutoLog.Singleton.is_queued_for_deletion():
 		AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Rolling the die, and...")
 	
 	if randf() < arguments.float_var:
@@ -41,7 +51,7 @@ func _perform_kill_or_love(arguments : AutoPlaySuiteActionResource):
 		_make_love(arguments)
 
 func _start_kill_or_love_forever(arguments : AutoPlaySuiteActionResource):
-	if Game.Singleton == null:
+	if !is_instance_valid(Game.Singleton) || Game.Singleton.is_queued_for_deletion():
 		arguments.fail("The Game singleton is unavailable.")
 		return
 	arguments.timeout_seconds = 0.0
@@ -57,7 +67,7 @@ func _process_kill_or_love_forever(delta : float, arguments : AutoPlaySuiteActio
 	arguments.runtime_data[&"time_until_next_action"] = 2.0
 
 func _enable_exit_on_condition(arguments : AutoPlaySuiteActionResource):
-	if Game.Singleton == null:
+	if !is_instance_valid(Game.Singleton) || Game.Singleton.is_queued_for_deletion():
 		arguments.fail("The Game singleton is unavailable.")
 		return
 	if !Game.Singleton.signal_on_population_changed.is_connected(_on_population_changed):
@@ -68,9 +78,9 @@ func _enable_exit_on_condition(arguments : AutoPlaySuiteActionResource):
 func _on_population_changed(current_population : int):
 	if current_population > 0 && current_population < 10:
 		return
-	if Game.Singleton != null && Game.Singleton.signal_on_population_changed.is_connected(_on_population_changed):
+	if is_instance_valid(Game.Singleton) && Game.Singleton.signal_on_population_changed.is_connected(_on_population_changed):
 		Game.Singleton.signal_on_population_changed.disconnect(_on_population_changed)
-	if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
+	if is_instance_valid(AutoPlaySuiteCustomLogger_AutoLog.Singleton) && !AutoPlaySuiteCustomLogger_AutoLog.Singleton.is_queued_for_deletion():
 		if current_population == 0:
 			AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Exited because all were dead!")
 		else:

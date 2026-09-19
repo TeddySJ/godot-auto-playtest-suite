@@ -10,6 +10,11 @@ func setup():
 	
 	AutoPlaySuiteLogger.get_default_logger().write_to_output(str("Created Evaluator: ", evaluator_name))
 
+func _exit_tree() -> void:
+	if Singleton == self:
+		Singleton = null
+	super._exit_tree()
+
 func _on_instruction(action_resource : AutoPlaySuiteActionResource):
 	var strings := action_resource.string_var.split(":")
 	var instr_id : String = strings[1]

@@ -226,7 +226,7 @@ func _load_series_button_pressed():
 
 func _load_series(path : String):
 	file_dialog = null
-	var loaded_resource := load(path)
+	var loaded_resource := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP)
 	
 	if !(loaded_resource is AutoPlaySuiteTestSeriesResource):
 		printerr("The loaded file is not a Test Series Resource")
@@ -264,7 +264,7 @@ func _set_current_series(new_series : AutoPlaySuiteTestSeriesResource) -> bool:
 		if path.is_empty():
 			printerr("Cannot load a test series containing an unsaved test.")
 			return false
-		var loaded_resource := load(path)
+		var loaded_resource := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP)
 		if !(loaded_resource is AutoPlaySuiteTestResource):
 			printerr("Could not load test resource from '%s'." % path)
 			return false

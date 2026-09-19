@@ -28,6 +28,13 @@ func _ready() -> void:
 	Singleton = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
+func _exit_tree() -> void:
+	if Singleton != self:
+		return
+	Singleton = null
+	AutoPlaySuiteHookNode.initialized = false
+	_clear_test_services()
+
 func _start_test(test : AutoPlaySuiteTestResource):
 	is_quitting = false
 	quit_requested = false
@@ -49,6 +56,8 @@ func _start_test(test : AutoPlaySuiteTestResource):
 	_progress_testing()
 
 func _restart_current_test():
+	_clear_test_services()
+	_create_default_logger()
 	_start_test(test_resource)
 
 func _populate_action_array_from_other_array(array : Array[AutoPlaySuiteActionResource]):
@@ -187,8 +196,18 @@ static func start_testing():
 	var path := OS.get_environment("AutoTestPath")
 	var test : AutoPlaySuiteTestResource = load(path)
 	_run_test.call_deferred(test)
-	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.instantiate_by_class_name("AutoPlaySuiteDefaultLogger")
-	Engine.get_main_loop().root.add_child.call_deferred(logger)
+	_create_default_logger()
+
+static func _create_default_logger() -> void:
+	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.get_default_logger()
+	if logger == null:
+		logger = AutoPlaySuiteLogger.instantiate_by_class_name("AutoPlaySuiteDefaultLogger")
+	if logger != null && logger.get_parent() == null:
+		Engine.get_main_loop().root.add_child.call_deferred(logger)
+
+static func _clear_test_services() -> void:
+	AutoPlaySuiteLogger.clear_created_loggers()
+	AutoPlaySuiteEvaluator.clear_created_evaluators()
 
 static func _run_test(test : AutoPlaySuiteTestResource):
 	print("Starting Test")
@@ -199,7 +218,8 @@ static func _run_test(test : AutoPlaySuiteTestResource):
 	test_runner._start_test(test)
 
 static func QuitGame():
-	if Singleton == null:
+	if !is_instance_valid(Singleton) || Singleton.is_queued_for_deletion():
+		Singleton = null
 		push_error("Cannot quit an auto play test without an active test runner.")
 		return
 	if Singleton.quit_requested:
@@ -212,8 +232,9 @@ static func QuitGame():
 		Singleton._quit_game(0)
 
 static func instance() -> AutoPlaySuiteTestRunner:
-	if Singleton != null:
+	if is_instance_valid(Singleton) && !Singleton.is_queued_for_deletion():
 		return Singleton
+	Singleton = null
 	
 	var instance := AutoPlaySuiteTestRunner.new()
 	Engine.get_main_loop().root.add_child(instance)
