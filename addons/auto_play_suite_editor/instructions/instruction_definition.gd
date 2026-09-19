@@ -1,7 +1,10 @@
 extends RefCounted
 class_name AutoPlaySuiteInstructionDefinition
 
+## Called once when the action becomes active. Avoid starting asynchronous work here
+## when the action must be suspended cleanly by an interruption.
 var on_enter : Callable
+## Called only while the action is current, so ongoing interruptible work belongs here.
 var on_process : Callable
 var description : String
 

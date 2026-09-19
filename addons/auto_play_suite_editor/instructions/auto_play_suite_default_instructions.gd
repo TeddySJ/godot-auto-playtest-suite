@@ -5,7 +5,7 @@ var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefi
 	&"[Debug] Print String" : AutoPlaySuiteInstructionDefinition.Create(_action_debug_print_string, "Prints a string"),
 	&"[Debug] Print Float" : AutoPlaySuiteInstructionDefinition.Create(_action_debug_print_float, "Prints a float"),
 	&"[Engine] Quit" : AutoPlaySuiteInstructionDefinition.Create(_action_exit_game, "Exits the game"),
-	&"[Wait] Wait X Seconds" : AutoPlaySuiteInstructionDefinition.Create(_wait_x_seconds, "Waits for [float] seconds"),
+	&"[Wait] Wait X Seconds" : AutoPlaySuiteInstructionDefinition.Create(_wait_x_seconds, "Waits for [float] seconds", _process_wait_x_seconds),
 	&"[Logging] Start Logger" : AutoPlaySuiteInstructionDefinition.Create(_start_logger, "Instances a logger of [string] class"),
 	&"[Logging] Instruct Logger" : AutoPlaySuiteInstructionDefinition.Create(_instruct_logger, "Instructs an existing logger of [string] class"),
 	&"[Eval] Start Evaluator" : AutoPlaySuiteInstructionDefinition.Create(_start_evaluator, "Instances an evaluator of [string] class"),
@@ -26,9 +26,9 @@ func _action_debug_print_float(arguments : AutoPlaySuiteActionResource):
 	arguments.finished = true
 
 func _action_exit_game(arguments : AutoPlaySuiteActionResource):
-	arguments.finished = true
 	await Engine.get_main_loop().create_timer(0.1).timeout
 	AutoPlaySuiteTestRunner.QuitGame()
+	arguments.finished = true
 
 func _action_print_hi(arguments : AutoPlaySuiteActionResource):
 	await Engine.get_main_loop().create_timer(arguments.float_var).timeout
@@ -77,7 +77,10 @@ func _instruct_evaluator(arguments : AutoPlaySuiteActionResource):
 
 
 func _wait_x_seconds(arguments : AutoPlaySuiteActionResource):
-	await Engine.get_main_loop().create_timer(arguments.float_var).timeout
-	arguments.finished = true
+	arguments.finished = arguments.float_var <= 0
+
+func _process_wait_x_seconds(delta : float, arguments : AutoPlaySuiteActionResource):
+	arguments.float_var -= delta
+	arguments.finished = arguments.float_var <= 0
 
 #endregion

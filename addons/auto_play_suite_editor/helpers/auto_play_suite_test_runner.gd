@@ -17,12 +17,15 @@ var current_action : AutoPlaySuiteActionResource
 var current_action_instruction : AutoPlaySuiteInstructionDefinition
 
 var post_actions_has_been_ran : bool = false
+var is_quitting : bool = false
 
 func _ready() -> void:
 	Singleton = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 func _start_test(test : AutoPlaySuiteTestResource):
+	is_quitting = false
+	post_actions_has_been_ran = false
 	test_resource = test.duplicate()
 	_populate_action_array_from_other_array(test_resource.actions)
 	_progress_testing()
@@ -36,36 +39,46 @@ func _populate_action_array_from_other_array(array : Array[AutoPlaySuiteActionRe
 		actions_to_do.append(action.duplicate())
 
 func _process(delta: float) -> void:
-	if current_action != null:
+	if current_action != null && !is_quitting:
 		current_action_instruction.on_process.call(delta, current_action)
 		if current_action.finished:
 			_progress_testing()
 
-## This is to be used in conjunction with external code that can inject the resource when game state requires it
+## Injects a high-priority action and suspends the current action's on_process callback.
+## Work already started asynchronously by on_enter cannot be suspended by the runner.
+## Interruptible actions should keep their ongoing work in on_process.
 func interrupt_with_this_action(action_resource : AutoPlaySuiteActionResource):
 	if !tests_are_running:
 		return
+	if action_resource == null:
+		push_error("Cannot interrupt with a null action resource.")
+		return
+	if !AutoPlaySuiteActionLibrary.possible_actions.has(action_resource.action_id):
+		push_error("Cannot interrupt with unknown action: %s" % action_resource.action_id)
+		return
 	
-	var action_instruction : AutoPlaySuiteInstructionDefinition = AutoPlaySuiteActionLibrary.possible_actions[action_resource.action_id]
+	var interrupting_action : AutoPlaySuiteActionResource = action_resource.duplicate()
+	interrupting_action.entered = false
+	interrupting_action.finished = false
 	actions_to_do.insert(0, current_action)
-	actions_to_do.insert(0, action_resource)
-	current_action = action_resource
+	current_action = interrupting_action
 	_run_current_action()
 
 func _run_current_action():
-	_run_action(current_action)
+	current_action_instruction = AutoPlaySuiteActionLibrary.possible_actions[current_action.action_id]
+	if !current_action.entered:
+		current_action.entered = true
+		current_action_instruction.on_enter.call(current_action)
 
 func _run_action(action_resource : AutoPlaySuiteActionResource):
-	current_action_instruction = AutoPlaySuiteActionLibrary.possible_actions[action_resource.action_id]
-	current_action_instruction.on_enter.call(action_resource)
+	var action_instruction : AutoPlaySuiteInstructionDefinition = AutoPlaySuiteActionLibrary.possible_actions[action_resource.action_id]
+	action_instruction.on_enter.call(action_resource)
 
 func _progress_testing():
 	if actions_to_do.size() > 0:
 		current_action = actions_to_do[0]
 		actions_to_do.remove_at(0)
-		if !current_action.entered:
-			current_action.entered = true
-			_run_current_action()
+		_run_current_action()
 	else:
 		_end_current_test()
 
@@ -106,6 +119,13 @@ static func _run_test(test : AutoPlaySuiteTestResource):
 	test_runner._start_test(test)
 
 static func QuitGame():
+	if Singleton == null:
+		push_error("Cannot quit an auto play test without an active test runner.")
+		return
+	if Singleton.is_quitting:
+		return
+	Singleton.is_quitting = true
+
 	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
 	
 	if Singleton.has_post_actions():
