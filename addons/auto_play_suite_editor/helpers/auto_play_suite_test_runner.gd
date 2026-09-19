@@ -18,6 +18,10 @@ var current_action_instruction : AutoPlaySuiteInstructionDefinition
 
 var post_actions_has_been_ran : bool = false
 var is_quitting : bool = false
+var quit_requested : bool = false
+var running_post_actions : bool = false
+var last_process_ticks_msec : int = 0
+var exit_code_after_post_actions : int = 0
 
 func _ready() -> void:
 	Singleton = self
@@ -25,8 +29,19 @@ func _ready() -> void:
 
 func _start_test(test : AutoPlaySuiteTestResource):
 	is_quitting = false
+	quit_requested = false
+	running_post_actions = false
 	post_actions_has_been_ran = false
+	exit_code_after_post_actions = 0
+	test_resource = null
+	if test == null:
+		_fail_test("Cannot start a null test resource.")
+		return
 	test_resource = test.duplicate()
+	var validation_errors := test_resource.get_validation_errors()
+	if !validation_errors.is_empty():
+		_fail_test("Invalid test resource: %s" % "; ".join(validation_errors))
+		return
 	_populate_action_array_from_other_array(test_resource.actions)
 	_progress_testing()
 
@@ -40,9 +55,23 @@ func _populate_action_array_from_other_array(array : Array[AutoPlaySuiteActionRe
 
 func _process(delta: float) -> void:
 	if current_action != null && !is_quitting:
-		current_action_instruction.on_process.call(delta, current_action)
-		if current_action.finished:
+		var processing_action := current_action
+		var processing_instruction := current_action_instruction
+		var current_ticks := Time.get_ticks_msec()
+		processing_action.elapsed_seconds += float(current_ticks - last_process_ticks_msec) / 1000.0
+		last_process_ticks_msec = current_ticks
+		processing_instruction.on_process.call(delta, processing_action)
+		if is_quitting || current_action != processing_action:
+			return
+		if processing_action.failed:
+			var failure_details := processing_action.failure_message
+			if failure_details.is_empty():
+				failure_details = "The action reported a failure without details."
+			_fail_test("Action '%s' failed: %s" % [processing_action.action_id, failure_details])
+		elif processing_action.finished:
 			_progress_testing()
+		elif processing_action.timeout_seconds > 0.0 && processing_action.elapsed_seconds >= processing_action.timeout_seconds:
+			_fail_test("Action '%s' timed out after %.1f seconds." % [processing_action.action_id, processing_action.timeout_seconds])
 
 ## Injects a high-priority action and suspends the current action's on_process callback.
 ## Work already started asynchronously by on_enter cannot be suspended by the runner.
@@ -53,7 +82,7 @@ func interrupt_with_this_action(action_resource : AutoPlaySuiteActionResource):
 	if action_resource == null:
 		push_error("Cannot interrupt with a null action resource.")
 		return
-	if !AutoPlaySuiteActionLibrary.possible_actions.has(action_resource.action_id):
+	if !AutoPlaySuiteActionLibrary.has_action(action_resource.action_id):
 		push_error("Cannot interrupt with unknown action: %s" % action_resource.action_id)
 		return
 	
@@ -65,14 +94,35 @@ func interrupt_with_this_action(action_resource : AutoPlaySuiteActionResource):
 	_run_current_action()
 
 func _run_current_action():
-	current_action_instruction = AutoPlaySuiteActionLibrary.possible_actions[current_action.action_id]
+	if current_action == null:
+		_fail_test("Cannot run a null action.")
+		return
+	current_action_instruction = AutoPlaySuiteActionLibrary.get_action(current_action.action_id)
+	if current_action_instruction == null:
+		_fail_test("Unknown action ID: %s" % current_action.action_id)
+		return
+	last_process_ticks_msec = Time.get_ticks_msec()
 	if !current_action.entered:
 		current_action.entered = true
 		current_action_instruction.on_enter.call(current_action)
 
-func _run_action(action_resource : AutoPlaySuiteActionResource):
-	var action_instruction : AutoPlaySuiteInstructionDefinition = AutoPlaySuiteActionLibrary.possible_actions[action_resource.action_id]
-	action_instruction.on_enter.call(action_resource)
+func _fail_test(message : String) -> void:
+	if is_quitting:
+		return
+	exit_code_after_post_actions = 1
+	quit_requested = true
+	push_error(message)
+	AutoPlaySuiteEvaluator.log_failed_evaluation(message)
+	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
+	current_action = null
+	if running_post_actions:
+		_progress_testing()
+		return
+	actions_to_do.clear()
+	if has_post_actions() && !post_actions_has_been_ran:
+		run_post_actions()
+	else:
+		_quit_game(exit_code_after_post_actions)
 
 func _progress_testing():
 	if actions_to_do.size() > 0:
@@ -80,10 +130,14 @@ func _progress_testing():
 		actions_to_do.remove_at(0)
 		_run_current_action()
 	else:
-		_end_current_test()
+		if running_post_actions:
+			_finish_post_actions()
+		else:
+			_end_current_test()
 
 func _end_current_test():
 	_testing_finished()
+	_fail_test("The main action queue finished without requesting a test exit.")
 
 func _testing_finished():
 	print("Testing finished!")
@@ -92,16 +146,30 @@ func _testing_finished():
 	actions_to_do = []
 
 func has_post_actions():
-	return test_resource.post_actions.size() > 0
+	return test_resource != null && test_resource.post_actions.size() > 0
 
 func run_post_actions():
 	if post_actions_has_been_ran:
 		return
 	post_actions_has_been_ran = true
-	
+	running_post_actions = true
 	print("Post Actions: ", test_resource.post_actions.size())
-	for post_action in test_resource.post_actions:
-		_run_action(post_action)
+	_populate_action_array_from_other_array(test_resource.post_actions)
+	current_action = null
+	_progress_testing()
+
+func _finish_post_actions() -> void:
+	running_post_actions = false
+	_testing_finished()
+	_quit_game(exit_code_after_post_actions)
+
+func _quit_game(exit_code : int) -> void:
+	if is_quitting:
+		return
+	is_quitting = true
+	current_action = null
+	actions_to_do.clear()
+	Engine.get_main_loop().quit(exit_code)
 
 static func start_testing():
 	var path := OS.get_environment("AutoTestPath")
@@ -122,17 +190,16 @@ static func QuitGame():
 	if Singleton == null:
 		push_error("Cannot quit an auto play test without an active test runner.")
 		return
-	if Singleton.is_quitting:
+	if Singleton.quit_requested:
 		return
-	Singleton.is_quitting = true
+	Singleton.quit_requested = true
 
 	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
 	
 	if Singleton.has_post_actions():
 		Singleton.run_post_actions()
-		await Engine.get_main_loop().create_timer(0.2).timeout
-	
-	Engine.get_main_loop().quit(0)
+	else:
+		Singleton._quit_game(0)
 
 static func instance() -> AutoPlaySuiteTestRunner:
 	if Singleton != null:

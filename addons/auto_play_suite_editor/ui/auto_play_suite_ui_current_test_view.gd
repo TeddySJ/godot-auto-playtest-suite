@@ -131,16 +131,18 @@ func _on_action_list_item_selected():
 func _on_selected_action_id_changed(new_id : String):
 	get_active_list().update_display_text_of_selected_index()
 
-func _save_test(path : String = ""):
+func _save_test(path : String = "") -> bool:
 	if file_dialog != null:
-		return
-	if action_list.get_item_count() == 0:
-		return
+		return false
+
+	_sync_current_test_to_list()
+	if !_print_validation_errors():
+		return false
 	
 	if path == "":
 		if current_file_path == "":
 			_save_test_as()
-			return
+			return false
 		path = current_file_path
 	
 	if path.begins_with("u"):
@@ -148,24 +150,30 @@ func _save_test(path : String = ""):
 	
 	current_file_path = path
 	
-	_sync_current_test_to_list()
-	
 	var create : bool = current_test.test_uid == ""
 	
 	current_test.take_over_path(path)
-	ResourceSaver.save(current_test, path)
+	var save_error := ResourceSaver.save(current_test, path)
+	if save_error != OK:
+		printerr("Failed to save test to '%s': error %d" % [path, save_error])
+		return false
 	
 	var uid : int = ResourceSaver.get_resource_id_for_path(path)
 	var uid_string : String = ResourceUID.id_to_text(uid)
 	current_test.test_uid = uid_string
 	
 	if create:
-		ResourceSaver.save(current_test, path) # Save again to store UID
+		save_error = ResourceSaver.save(current_test, path) # Save again to store UID
+		if save_error != OK:
+			printerr("Failed to store the test UID in '%s': error %d" % [path, save_error])
+			return false
 	
 	signal_on_current_test_saved.emit(uid_string)
+	return true
 
 func _save_test_as():
-	if action_list.get_item_count() == 0:
+	_sync_current_test_to_list()
+	if !_print_validation_errors():
 		return
 
 	if file_dialog != null:
@@ -178,6 +186,12 @@ func _save_test_as():
 	file_dialog.add_filter("*.test.tres")
 	file_dialog.canceled.connect(_file_dialog_canceled)
 	file_dialog.file_selected.connect(_save_file_chosen)
+
+func _print_validation_errors() -> bool:
+	var errors := current_test.get_validation_errors()
+	for error in errors:
+		printerr("Cannot save test '%s': %s" % [current_test.test_name, error])
+	return errors.is_empty()
 
 func _save_file_chosen(path : String):
 	file_dialog = null

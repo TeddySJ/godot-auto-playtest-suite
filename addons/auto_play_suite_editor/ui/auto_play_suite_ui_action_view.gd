@@ -1,7 +1,7 @@
 extends AutoPlaySuiteUiView
 class_name AutoPlaySuiteUiActionView
 
-static var index_pool : int = 0
+var index_pool : int = 0
 var backing_dictionary : Dictionary[StringName, int]
 
 var main_panel : Panel
@@ -12,6 +12,7 @@ var run_action_button : Button
 
 var float_var_spinbox : SpinBox
 var string_var_line_edit : LineEdit
+var timeout_spinbox : SpinBox
 # TODO: Add functionality for the array of strings, possibly via a dropdown as an interface (with add new and remove as buttons)
 
 var underlying_action : AutoPlaySuiteActionResource = null
@@ -78,8 +79,27 @@ func _ready() -> void:
 	string_var_line_edit.text_changed.connect(_string_var_changed)
 	main_panel.add_child(string_var_line_edit)
 
+	var timeout_pos := Vector2(30, y_offset + 200) * ed_scale
+	label = Label.new()
+	label.text = "Timeout:"
+	label.tooltip_text = "Maximum wall-clock seconds for this action. Set to 0 to disable the timeout."
+	label.position = timeout_pos
+	main_panel.add_child(label)
+
+	timeout_spinbox = SpinBox.new()
+	timeout_spinbox.min_value = 0
+	timeout_spinbox.max_value = 99999999
+	timeout_spinbox.step = 0.1
+	timeout_spinbox.position = timeout_pos + Vector2(100, -4) * ed_scale
+	timeout_spinbox.custom_minimum_size.x = 200 * ed_scale
+	timeout_spinbox.tooltip_text = label.tooltip_text
+	timeout_spinbox.value_changed.connect(_timeout_changed)
+	main_panel.add_child(timeout_spinbox)
+
 func _add_drop_down_item(_name : StringName):
-	drop_down.add_item(_name)
+	if backing_dictionary.has(_name):
+		return
+	drop_down.add_item(_name, index_pool)
 	backing_dictionary[_name] = index_pool
 	index_pool += 1
 
@@ -125,9 +145,10 @@ func _filter_line_edit_changed(text : String):
 	#      I need to rewrite the dropdown as something else! Probably with an ItemList that hides on pick
 
 func _action_id_changed(index : int):
-	underlying_action.action_id = drop_down.text
-	current_drop_down_option = drop_down.text
-	signal_on_action_id_changed.emit(drop_down.text)
+	var selected_action_id := StringName(drop_down.get_item_text(index))
+	underlying_action.action_id = selected_action_id
+	current_drop_down_option = selected_action_id
+	signal_on_action_id_changed.emit(selected_action_id)
 	float_var_spinbox.value = 0
 	string_var_line_edit.text = ""
 	signal_on_action_changed.emit()
@@ -140,6 +161,10 @@ func _float_var_changed(new_value : float):
 	underlying_action.float_var = new_value
 	signal_on_action_changed.emit()
 
+func _timeout_changed(new_value : float):
+	underlying_action.timeout_seconds = new_value
+	signal_on_action_changed.emit()
+
 func _set_action(action_to_set : AutoPlaySuiteActionResource):
 	if underlying_action != null:
 		if float_var_spinbox.get_line_edit().text != "":
@@ -150,6 +175,8 @@ func _set_action(action_to_set : AutoPlaySuiteActionResource):
 				underlying_action.float_var = text_value
 		
 	underlying_action = action_to_set
+	if !backing_dictionary.has(underlying_action.action_id):
+		_add_drop_down_item(underlying_action.action_id)
 	current_drop_down_option = underlying_action.action_id
 	_filter_drop_down(filter_line_edit.text)
 	_update_text_fields()
@@ -159,6 +186,7 @@ func _update_text_fields():
 	drop_down.select(drop_down.get_item_index(drop_down_id))
 	string_var_line_edit.text = underlying_action.string_var
 	float_var_spinbox.value = underlying_action.float_var
+	timeout_spinbox.value = underlying_action.timeout_seconds
 
 func _select_in_drop_down(item_name : StringName):
 	var drop_down_id : int = backing_dictionary[item_name]

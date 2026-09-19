@@ -5,8 +5,8 @@ var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefi
 	&"[Game] Kill" : AutoPlaySuiteInstructionDefinition.Create(_kill, "Make a person kill someone in the game"),
 	&"[Game] Make Love" : AutoPlaySuiteInstructionDefinition.Create(_make_love, "Make two people make love in the game"),
 	&"[Game] Kill < X, Love >= X" : AutoPlaySuiteInstructionDefinition.Create(_kill_or_love, "Gamble!"),
-	&"[Game] Play Forever, K<X, L>X" : AutoPlaySuiteInstructionDefinition.Create(_kill_or_love_forever, "Gamble!"),
-	&"[Game] Exit On All Dead Or 10 Alive" : AutoPlaySuiteInstructionDefinition.Create(_exit_on_condition, "Sets the game to exit if ever at 0 or 10 people"),
+	&"[Game] Play Forever, K<X, L>X" : AutoPlaySuiteInstructionDefinition.Create(_start_kill_or_love_forever, "Gamble forever", _process_kill_or_love_forever),
+	&"[Game] Exit On All Dead Or 10 Alive" : AutoPlaySuiteInstructionDefinition.Create(_enable_exit_on_condition, "Sets the game to exit if ever at 0 or 10 people"),
 	&"[Game] Set Time Scale" : AutoPlaySuiteInstructionDefinition.Create(_set_time_scale, "Sets the engine's time scale"),
 }
 
@@ -28,7 +28,10 @@ func _make_love(arguments : AutoPlaySuiteActionResource):
 	arguments.finished = true
 
 func _kill_or_love(arguments : AutoPlaySuiteActionResource):
-	
+	_perform_kill_or_love(arguments)
+	arguments.finished = true
+
+func _perform_kill_or_love(arguments : AutoPlaySuiteActionResource):
 	if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
 		AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Rolling the die, and...")
 	
@@ -36,28 +39,43 @@ func _kill_or_love(arguments : AutoPlaySuiteActionResource):
 		_kill(arguments)
 	else:
 		_make_love(arguments)
-		
-	arguments.finished = true
-	
-func _kill_or_love_forever(arguments : AutoPlaySuiteActionResource):
-	_kill_or_love(arguments)
-	Engine.get_main_loop().create_timer(2).timeout.connect(_kill_or_love_forever.bind(arguments))
-	
-func _exit_on_condition(arguments : AutoPlaySuiteActionResource):
-	print("Exit on condition?")
-	if Game.Singleton.people_alive.size() == 0:
-		if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
-			AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Exited because all were dead!")
-		Engine.get_main_loop().create_timer(10).timeout.connect(AutoPlaySuiteTestRunner.QuitGame)
-		return
-	elif Game.Singleton.people_alive.size() >= 10:
-		if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
-			AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Exited because paradise was achieved! Ten alive!")
-		AutoPlaySuiteTestRunner.QuitGame()
-		return
 
+func _start_kill_or_love_forever(arguments : AutoPlaySuiteActionResource):
+	if Game.Singleton == null:
+		arguments.fail("The Game singleton is unavailable.")
+		return
+	arguments.timeout_seconds = 0.0
+	arguments.runtime_data[&"time_until_next_action"] = 0.0
+
+func _process_kill_or_love_forever(delta : float, arguments : AutoPlaySuiteActionResource):
+	var time_until_next : float = arguments.runtime_data.get(&"time_until_next_action", 0.0) - delta
+	if time_until_next > 0.0:
+		arguments.runtime_data[&"time_until_next_action"] = time_until_next
+		return
+	_perform_kill_or_love(arguments)
+	arguments.finished = false
+	arguments.runtime_data[&"time_until_next_action"] = 2.0
+
+func _enable_exit_on_condition(arguments : AutoPlaySuiteActionResource):
+	if Game.Singleton == null:
+		arguments.fail("The Game singleton is unavailable.")
+		return
+	if !Game.Singleton.signal_on_population_changed.is_connected(_on_population_changed):
+		Game.Singleton.signal_on_population_changed.connect(_on_population_changed)
 	arguments.finished = true
-	Engine.get_main_loop().create_timer(1).timeout.connect(_exit_on_condition.bind(arguments))
+	_on_population_changed(Game.Singleton.people_alive.size())
+
+func _on_population_changed(current_population : int):
+	if current_population > 0 && current_population < 10:
+		return
+	if Game.Singleton != null && Game.Singleton.signal_on_population_changed.is_connected(_on_population_changed):
+		Game.Singleton.signal_on_population_changed.disconnect(_on_population_changed)
+	if AutoPlaySuiteCustomLogger_AutoLog.Singleton:
+		if current_population == 0:
+			AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Exited because all were dead!")
+		else:
+			AutoPlaySuiteCustomLogger_AutoLog.Singleton.write_to_output("Exited because paradise was achieved! Ten alive!")
+	AutoPlaySuiteTestRunner.QuitGame()
 
 func _set_time_scale(arguments : AutoPlaySuiteActionResource):
 	Engine.time_scale = arguments.float_var

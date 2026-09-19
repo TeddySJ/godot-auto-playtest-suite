@@ -17,6 +17,7 @@ var people_alive : Array[String] = []
 var waiting_for_messages : int = 0
 
 signal signal_on_write_to_log(message)
+signal signal_on_population_changed(current_population : int)
 
 func _ready() -> void:
 	Singleton = self
@@ -73,11 +74,13 @@ func _kill_random():
 		_write_to_log(str(person, " tog sitt eget liv."))
 		people_alive.clear()
 		_all_are_dead()
+		signal_on_population_changed.emit(people_alive.size())
 	else:
 		var victim : String = people_alive.pick_random()
 		people_alive.erase(victim)
 		var killer : String = people_alive.pick_random()
 		_kill(killer, victim)
+		signal_on_population_changed.emit(people_alive.size())
 		
 		
 
@@ -121,6 +124,7 @@ func _procreate_random():
 		var new_person : String = _get_unused_name()
 		people_alive.append(new_person)
 		_write_to_log(str(p1, " låg med ", p2, " och nu finns ", new_person, "!"))
+		signal_on_population_changed.emit(people_alive.size())
 		
 
 func _get_unused_name() -> String:

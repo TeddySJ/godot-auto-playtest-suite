@@ -292,7 +292,8 @@ func _run_current_test():
 		printerr("Test must be saved to file before running it!")
 		return
 	
-	current_test_view._save_test()
+	if !current_test_view._save_test():
+		return
 	
 	_prepare_for_testing()
 	
@@ -359,6 +360,12 @@ func _restore_environment_after_testing():
 func _run_all_tests():
 	tests_to_run.clear()
 	tests_to_run.append_array(test_series_view._get_all_tests_in_order())
+	for test in tests_to_run:
+		var validation_errors := test.get_validation_errors()
+		if !validation_errors.is_empty():
+			for error in validation_errors:
+				printerr("Cannot run test '%s': %s" % [test.test_name, error])
+			return
 	
 	_prepare_for_testing()
 	_run_next_test()

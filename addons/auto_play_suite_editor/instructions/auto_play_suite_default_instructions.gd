@@ -39,41 +39,44 @@ func _action_process_print_hi(delta: float, arguments : AutoPlaySuiteActionResou
 	arguments.float_var -= delta
 
 func _start_logger(arguments : AutoPlaySuiteActionResource):
-	arguments.finished = true
 	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.instantiate_by_class_name(arguments.string_var)
 	if logger == null:
-		print("Failed to create logger of type: ", arguments.string_var)
+		arguments.fail("Failed to create logger of type: %s" % arguments.string_var)
 		return
 	
 	Engine.get_main_loop().root.add_child.call_deferred(logger)
+	arguments.finished = true
 
 func _instruct_logger(arguments : AutoPlaySuiteActionResource):
-	arguments.finished = true
 	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.get_logger_by_class_name(arguments.string_var)
 	if logger == null:
-		print("Failed to get logger of type: ", arguments.string_var)
+		arguments.fail("Failed to get logger of type: %s" % arguments.string_var)
 		return
 	
 	logger._on_instruction(arguments)
+	arguments.finished = true
 
 func _start_evaluator(arguments : AutoPlaySuiteActionResource):
-	arguments.finished = true
 	var evaluator : AutoPlaySuiteEvaluator = AutoPlaySuiteEvaluator.instantiate_by_class_name(arguments.string_var)
 	if evaluator == null:
-		print("Failed to create evaluator of type: ", arguments.string_var)
+		arguments.fail("Failed to create evaluator of type: %s" % arguments.string_var)
 		return
 	
 	Engine.get_main_loop().root.add_child.call_deferred(evaluator)
+	arguments.finished = true
 
 func _instruct_evaluator(arguments : AutoPlaySuiteActionResource):
-	arguments.finished = true
-	var strings : PackedStringArray = arguments.string_var.split(":")
+	var strings : PackedStringArray = arguments.string_var.split(":", true, 1)
+	if strings.size() != 2 || strings[0].is_empty() || strings[1].is_empty():
+		arguments.fail("Expected evaluator instruction syntax '[class_name]:[instruction]'.")
+		return
 	var evaluator : AutoPlaySuiteEvaluator = AutoPlaySuiteEvaluator.get_evaluator_by_class_name(strings[0])
 	if evaluator == null:
-		print("Failed to get evaluator of type: ", strings[0])
+		arguments.fail("Failed to get evaluator of type: %s" % strings[0])
 		return
 	
 	evaluator._on_instruction(arguments)
+	arguments.finished = true
 
 
 func _wait_x_seconds(arguments : AutoPlaySuiteActionResource):

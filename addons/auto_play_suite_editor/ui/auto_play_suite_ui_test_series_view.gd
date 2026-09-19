@@ -316,19 +316,28 @@ func _on_run_all_tests_button_pressed():
 			printerr("One or more of the tests in the series has not been saved to disk yet!")
 			return
 	
-	_save_all_tests_in_series()
+	if !_save_all_tests_in_series():
+		return
 	
 	signal_on_run_all_tests_pressed.emit()
 
-func _save_all_tests_in_series():
+func _save_all_tests_in_series() -> bool:
 	var origin_index : int = current_selected_index
+	var editor := AutoPlaySuite._get_plugin_singleton()
 	for n in test_button_list.size():
 		current_selected_index = n
-		var test = underlying_dictionary[test_button_list[n]]
+		var test : AutoPlaySuiteTestResource = underlying_dictionary[test_button_list[n]]
 		_change_to_test(test)
-		AutoPlaySuite._get_plugin_singleton()._save_test(_get_test_uid_path(test))
-		
-	_test_button_pressed(test_button_list[origin_index])
+		if !editor.current_test_view._save_test(_get_test_uid_path(test)):
+			_restore_selected_test(origin_index)
+			return false
+
+	_restore_selected_test(origin_index)
+	return true
+
+func _restore_selected_test(index : int) -> void:
+	if index >= 0 && index < test_button_list.size():
+		_test_button_pressed(test_button_list[index])
 
 func _get_all_tests_in_order() -> Array[AutoPlaySuiteTestResource]:
 	var ret : Array[AutoPlaySuiteTestResource] = []
