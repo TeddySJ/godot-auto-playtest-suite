@@ -2,6 +2,18 @@ extends SceneTree
 
 var failures : PackedStringArray = []
 
+class StartupProbe extends AutoPlaySuite:
+	var simulated_game_running : bool = false
+
+	func _ready() -> void:
+		pass
+
+	func _is_game_running() -> bool:
+		return simulated_game_running
+
+	func _stop_game() -> void:
+		simulated_game_running = false
+
 func _initialize() -> void:
 	_run_validation.call_deferred()
 
@@ -79,24 +91,43 @@ func _run_validation() -> void:
 	var next_test := _make_test("Next", "uid://series-validation-next")
 	editor.currently_running_test = repeated_test
 	editor.current_test_run_id = 1
+	editor.current_test_run_token = "run-one"
 	editor._debugger_session_started(41)
+	editor._system_message_received([&"RunStarted", "run-one"], 41)
 	editor._debugger_session_stopped(41)
 	editor.currently_running_test = next_test
 	editor.current_test_run_id = 2
+	editor.current_test_run_token = "run-two"
 	editor.test_has_exited_properly = false
-	editor._system_message_received([&"ExitThroughTestAction"], 41)
+	editor._system_message_received([&"RunFinished", "run-one", 0], 41)
 	_assert_true(editor.current_debugger_session_id == -1, "A known session from an earlier run should not become the current session.")
 	_assert_true(!editor.test_has_exited_properly, "A delayed exit message should not mark the next run as properly exited.")
-	editor._logger_message_received(["Default Logger", "Set Data", "source", "first"], 41)
-	_assert_true(editor.logs.log_dictionary.has(repeated_test.get_identity_key()), "Late messages should remain associated with their debugger session's test.")
+	editor._logger_message_received(["run-one", "Default Logger", "Set Data", "source", "first"], 41)
+	_assert_true(!editor.logs.log_dictionary.has(repeated_test.get_identity_key()), "Messages arriving after their run has ended should be ignored.")
 	_assert_true(!editor.logs.log_dictionary.has(next_test.get_identity_key()), "Late messages should not leak into the next test.")
 	editor._debugger_session_started(41)
 	_assert_true(editor.current_debugger_session_id == 41, "A reused debugger session should bind to the new run when it starts.")
-	_assert_true(editor.debugger_session_run_ids[41] == 2, "A reused debugger session should record the new run generation.")
-	editor._system_message_received([&"ExitThroughTestAction"], 41)
+	editor._system_message_received([&"RunStarted", "run-two"], 41)
+	_assert_true(editor.debugger_session_run_ids[41] == "run-two", "A reused debugger session should record the new run token.")
+	editor._system_message_received([&"RunFinished", "run-two", 0], 41)
 	_assert_true(editor.test_has_exited_properly, "The reused session's exit message should complete the new run.")
-	editor._logger_message_received(["Default Logger", "Set Data", "source", "second"], 41)
+	editor._logger_message_received(["run-two", "Default Logger", "Set Data", "source", "second"], 41)
 	_assert_true(editor.logs.log_dictionary.has(next_test.get_identity_key()), "Messages after a reused session starts should belong to the new test.")
+
+	var startup_probe := StartupProbe.new()
+	root.add_child(startup_probe)
+	startup_probe.run_started = true
+	_assert_true(await startup_probe._wait_until_run_starts(1), "An acknowledged runtime startup should complete the startup handshake.")
+	startup_probe.run_started = false
+	startup_probe.simulated_game_running = true
+	_assert_true(!await startup_probe._wait_until_run_starts(1), "A runtime that never acknowledges startup should time out.")
+	startup_probe.queue_free()
+
+	editor.currently_running_test = next_test
+	editor.current_test_run_id = 2
+	editor._record_current_run_failure("startup validation failure")
+	_assert_true(!editor._test_passed(next_test), "An editor-detected startup failure should fail the test.")
+	editor.current_run_failure_message = ""
 
 	editor.running_test_series = true
 	editor.test_has_exited_properly = false

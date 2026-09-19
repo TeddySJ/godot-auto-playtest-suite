@@ -27,10 +27,10 @@ func write_to_output(string):
 	if forward_output_to_editor:
 		print(string)
 	
-	EngineDebugger.send_message("aps:logging", [logger_name, "Output Stream", string])
+	EngineDebugger.send_message("aps:logging", [OS.get_environment("AutoTestRunToken"), logger_name, "Output Stream", string])
 
 func write_as_entry(key : String, data):
-	EngineDebugger.send_message("aps:logging", [logger_name, "Set Data", key, data])
+	EngineDebugger.send_message("aps:logging", [OS.get_environment("AutoTestRunToken"), logger_name, "Set Data", key, data])
 
 func log_to_list_entry(key : String, data, also_to_output : bool):
 	var array : Array = dictionary_log.get_or_add(key, [])

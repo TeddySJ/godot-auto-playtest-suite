@@ -7,7 +7,7 @@ class_name AutoPlaySuiteTestResource
 @export var actions : Array[AutoPlaySuiteActionResource]
 @export var post_actions : Array[AutoPlaySuiteActionResource]
 
-@export var premature_end_is_error : bool = false
+@export var premature_end_is_error : bool = true
 
 func get_identity_key() -> String:
 	if !test_uid.is_empty():

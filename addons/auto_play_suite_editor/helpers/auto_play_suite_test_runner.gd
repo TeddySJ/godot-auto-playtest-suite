@@ -22,6 +22,7 @@ var quit_requested : bool = false
 var running_post_actions : bool = false
 var last_process_ticks_msec : int = 0
 var exit_code_after_post_actions : int = 0
+var run_token : String = ""
 
 func _ready() -> void:
 	Singleton = self
@@ -33,6 +34,8 @@ func _start_test(test : AutoPlaySuiteTestResource):
 	running_post_actions = false
 	post_actions_has_been_ran = false
 	exit_code_after_post_actions = 0
+	run_token = OS.get_environment("AutoTestRunToken")
+	_send_system_message([&"RunStarted", run_token])
 	test_resource = null
 	if test == null:
 		_fail_test("Cannot start a null test resource.")
@@ -168,8 +171,11 @@ func _quit_game(exit_code : int) -> void:
 	is_quitting = true
 	current_action = null
 	actions_to_do.clear()
-	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
+	_send_system_message([&"RunFinished", run_token, exit_code])
 	_quit_after_debugger_flush(exit_code)
+
+func _send_system_message(data : Array) -> void:
+	EngineDebugger.send_message("aps:system", data)
 
 func _quit_after_debugger_flush(exit_code : int) -> void:
 	# Allow the final evaluation and system messages to reach the editor before

@@ -12,20 +12,22 @@ var trace : Array[String] = []
 
 class RecordingRunner extends AutoPlaySuiteTestRunner:
 	var recorded_exit_code : int = -1
+	var recorded_system_messages : Array[Array] = []
 
-	func _quit_game(exit_code : int) -> void:
-		if is_quitting:
-			return
-		is_quitting = true
+	func _send_system_message(data : Array) -> void:
+		recorded_system_messages.append(data)
+
+	func _quit_after_debugger_flush(exit_code : int) -> void:
 		recorded_exit_code = exit_code
-		current_action = null
-		actions_to_do.clear()
 
 func _initialize() -> void:
+	OS.set_environment("AutoTestRunToken", "runner-regression")
 	_run_regressions.call_deferred()
 
 func _run_regressions() -> void:
 	_register_regression_actions()
+	_test_unexpected_end_is_an_error_by_default()
+	_test_nonzero_runtime_exit_fails_without_evaluation_log()
 	_test_failed_main_action_runs_post_actions()
 	_test_invalid_main_action_runs_post_actions()
 	_test_timed_out_main_action_runs_post_actions()
@@ -37,7 +39,22 @@ func _run_regressions() -> void:
 		print("AUTO_PLAY_SUITE_RUNNER_REGRESSION: PASS")
 	else:
 		push_error("AUTO_PLAY_SUITE_RUNNER_REGRESSION: %d failure(s)" % failures)
+	OS.set_environment("AutoTestRunToken", "")
 	quit(failures)
+
+func _test_unexpected_end_is_an_error_by_default() -> void:
+	var test := AutoPlaySuiteTestResource.new()
+	_expect(test.premature_end_is_error, "Unexpected test termination should be an error by default.")
+
+func _test_nonzero_runtime_exit_fails_without_evaluation_log() -> void:
+	var editor := AutoPlaySuite.new()
+	editor.logs = AutoPlaySuiteLogStore.new()
+	editor.received_exit_message = true
+	editor.current_test_exit_code = 1
+	var test := AutoPlaySuiteTestResource.new()
+	test.test_name = "NonzeroExit"
+	_expect(!editor._test_passed(test), "A nonzero runtime exit should fail without relying on an evaluation log.")
+	editor.free()
 
 func _register_regression_actions() -> void:
 	AutoPlaySuiteActionLibrary.clear_library()
@@ -96,6 +113,7 @@ func _test_normal_quit_runs_post_actions_with_zero_exit() -> void:
 
 	_expect(trace == ["hold", "post_one", "post_two"], "A normal quit should run all post-actions in order.")
 	_expect(runner.recorded_exit_code == 0, "A normal quit should retain a zero exit code after post-actions.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 0]), "A normal quit should report its run token and zero exit code.")
 	_destroy_runner(runner)
 
 func _test_failed_post_action_continues_cleanup() -> void:
@@ -108,6 +126,7 @@ func _test_failed_post_action_continues_cleanup() -> void:
 
 	_expect(trace == ["hold", "fail", "post_two"], "A failed post-action should not prevent later cleanup post-actions.")
 	_expect(runner.recorded_exit_code == 1, "A failed post-action should change the final exit code to nonzero.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 1]), "A failed test should report its run token and nonzero exit code.")
 	_destroy_runner(runner)
 
 func _test_reused_interrupt_drops_runtime_state() -> void:

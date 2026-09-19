@@ -2,6 +2,9 @@
 extends Control
 class_name AutoPlaySuite
 
+const DEBUGGER_MESSAGE_GRACE_MSEC : int = 500
+const RUN_START_TIMEOUT_MSEC : int = 15000
+
 static var Singleton : AutoPlaySuite:
 	get:
 		return _get_plugin_singleton()
@@ -50,6 +53,8 @@ var show_logs_button : Button
 var item_affected_by_popup : TreeItem
 
 var test_has_exited_properly : bool = false
+var received_exit_message : bool = false
+var current_test_exit_code : int = 0
 
 var tests_to_run : Array[AutoPlaySuiteTestResource]
 var currently_running_test : AutoPlaySuiteTestResource = null
@@ -58,9 +63,12 @@ var running_test_series : bool = false
 var series_cancelled : bool = false
 var accumulated_test_results : Dictionary[String, bool] = {}
 var debugger_session_test_keys : Dictionary[int, String] = {}
-var debugger_session_run_ids : Dictionary[int, int] = {}
+var debugger_session_run_ids : Dictionary[int, String] = {}
 var current_debugger_session_id : int = -1
 var current_test_run_id : int = 0
+var current_test_run_token : String = ""
+var run_started : bool = false
+var current_run_failure_message : String = ""
 
 var current_context : CurrentContext = CurrentContext.Running
 var is_in_editor : bool:
@@ -209,10 +217,6 @@ func _setup_in_editor():
 func _debugger_session_started(session_id : int) -> void:
 	if currently_running_test == null:
 		return
-	# Godot reuses inactive debugger slots. A started signal is the authoritative
-	# boundary that assigns the session ID to the new run generation.
-	debugger_session_test_keys[session_id] = currently_running_test.get_identity_key()
-	debugger_session_run_ids[session_id] = current_test_run_id
 	current_debugger_session_id = session_id
 
 func _debugger_session_stopped(session_id : int) -> void:
@@ -220,14 +224,17 @@ func _debugger_session_stopped(session_id : int) -> void:
 		current_debugger_session_id = -1
 
 func _logger_message_received(data: Array, session_id : int):
+	if data.size() < 3:
+		return
+	var message_run_token := str(data[0])
+	if message_run_token != current_test_run_token:
+		return
+	if debugger_session_run_ids.get(session_id, "") != message_run_token:
+		return
 	var test_key : String = debugger_session_test_keys.get(session_id, "")
-	if test_key.is_empty() && currently_running_test != null:
-		test_key = currently_running_test.get_identity_key()
-		debugger_session_test_keys[session_id] = test_key
-		debugger_session_run_ids[session_id] = current_test_run_id
-		if current_debugger_session_id == -1:
-			current_debugger_session_id = session_id
-	logs.handle_debugger_message(data, test_key)
+	if test_key.is_empty():
+		return
+	logs.handle_debugger_message(data.slice(1), test_key)
 
 func _show_action_view():
 	_hide_all_right_side_elements()
@@ -344,6 +351,8 @@ func _prepare_for_testing(is_series : bool):
 	debugger_session_run_ids.clear()
 	current_debugger_session_id = -1
 	current_test_run_id = 0
+	current_test_run_token = ""
+	run_started = false
 	test_series_view.set_testing_in_progress(true)
 	current_test_view.set_testing_in_progress(true)
 	action_view.set_testing_in_progress(true)
@@ -371,6 +380,12 @@ func _on_test_ended(test : AutoPlaySuiteTestResource):
 	signal_on_test_passed_or_failed_evaluation.emit(test, success)
 
 func _test_passed(test : AutoPlaySuiteTestResource) -> bool:
+	if !current_run_failure_message.is_empty():
+		return false
+
+	if received_exit_message && current_test_exit_code != 0:
+		return false
+
 	if !test_has_exited_properly && test.premature_end_is_error:
 		return false
 	
@@ -400,13 +415,27 @@ func _setup_environment_for_testing():
 func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finished : Callable):
 	currently_running_test = test_resource
 	current_test_run_id += 1
+	current_test_run_token = "%d-%d" % [Time.get_ticks_usec(), current_test_run_id]
 	current_debugger_session_id = -1
+	run_started = false
+	current_run_failure_message = ""
 	var path := test_series_view._get_test_uid_path(test_resource)
 	_set_current_test_file_path_environment(path)
+	OS.set_environment("AutoTestRunToken", current_test_run_token)
 	test_has_exited_properly = false
+	received_exit_message = false
+	current_test_exit_code = 0
 	
 	EditorInterface.play_main_scene()
+	var started_successfully := await _wait_until_run_starts()
+	if !started_successfully:
+		if _is_game_running():
+			_record_current_run_failure("The game started, but the Auto Play Suite runner did not report in within %.1f seconds." % [float(RUN_START_TIMEOUT_MSEC) / 1000.0])
+			_stop_game()
+		else:
+			_record_current_run_failure("The game exited before the Auto Play Suite runner reported that it had started.")
 	await _wait_until_game_exits()
+	await _wait_for_exit_message()
 	
 	_on_test_ended(test_resource)
 	if _should_cancel_series_after_test(test_resource):
@@ -424,6 +453,7 @@ func _set_current_test_file_path_environment(path : String):
 func _restore_environment_after_testing():
 	OS.set_environment("DoAutoTesting", "")
 	OS.set_environment("AutoTestPath", "")
+	OS.set_environment("AutoTestRunToken", "")
 
 func _run_all_tests():
 	if testing_in_progress:
@@ -453,7 +483,41 @@ func _run_next_test():
 func _wait_until_game_exits() -> void:
 	# Give the editor one frame to flip into "playing" state.
 	await get_tree().process_frame
-	while EditorInterface.is_playing_scene():
+	while _is_game_running():
+		await get_tree().process_frame
+
+func _wait_until_run_starts(timeout_msec : int = RUN_START_TIMEOUT_MSEC) -> bool:
+	var deadline := Time.get_ticks_msec() + timeout_msec
+	var observed_running_game := false
+	while Time.get_ticks_msec() < deadline:
+		if run_started:
+			return true
+		if _is_game_running():
+			observed_running_game = true
+		elif observed_running_game:
+			return false
+		await get_tree().process_frame
+	return run_started
+
+func _is_game_running() -> bool:
+	return EditorInterface.is_playing_scene()
+
+func _stop_game() -> void:
+	EditorInterface.stop_playing_scene()
+
+func _record_current_run_failure(message : String) -> void:
+	current_run_failure_message = message
+	printerr(message)
+	if currently_running_test == null:
+		return
+	logs.handle_debugger_message(
+		["Default Logger", "Failed Evaluation", "Editor-%d" % current_test_run_id, message],
+		currently_running_test.get_identity_key()
+	)
+
+func _wait_for_exit_message() -> void:
+	var deadline := Time.get_ticks_msec() + DEBUGGER_MESSAGE_GRACE_MSEC
+	while !received_exit_message && Time.get_ticks_msec() < deadline:
 		await get_tree().process_frame
 
 func _current_action_list_changed():
@@ -474,14 +538,22 @@ func _on_current_test_saved(uid_string : String):
 	test_series_view._update_path_to_current_test(uid_string)
 
 func _system_message_received(data : Array, session_id : int):
-	if data.size() == 0:
+	if data.size() < 2 || currently_running_test == null:
 		return
-	if current_debugger_session_id == -1 && currently_running_test != null:
-		if debugger_session_run_ids.has(session_id) && debugger_session_run_ids[session_id] != current_test_run_id:
-			return
+	var message_type := StringName(data[0])
+	var message_run_token := str(data[1])
+	if message_run_token != current_test_run_token:
+		return
+
+	if message_type == &"RunStarted":
 		debugger_session_test_keys[session_id] = currently_running_test.get_identity_key()
-		debugger_session_run_ids[session_id] = current_test_run_id
+		debugger_session_run_ids[session_id] = message_run_token
 		current_debugger_session_id = session_id
+		run_started = true
+		return
 	
-	if data[0] == &"ExitThroughTestAction" && session_id == current_debugger_session_id:
+	if message_type == &"RunFinished" && debugger_session_run_ids.get(session_id, "") == message_run_token:
 		test_has_exited_properly = true
+		received_exit_message = true
+		if data.size() > 2:
+			current_test_exit_code = int(data[2])
