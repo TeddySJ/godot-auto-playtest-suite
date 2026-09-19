@@ -113,7 +113,6 @@ func _fail_test(message : String) -> void:
 	quit_requested = true
 	push_error(message)
 	AutoPlaySuiteEvaluator.log_failed_evaluation(message)
-	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
 	current_action = null
 	if running_post_actions:
 		_progress_testing()
@@ -169,7 +168,14 @@ func _quit_game(exit_code : int) -> void:
 	is_quitting = true
 	current_action = null
 	actions_to_do.clear()
-	Engine.get_main_loop().quit(exit_code)
+	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
+	_quit_after_debugger_flush(exit_code)
+
+func _quit_after_debugger_flush(exit_code : int) -> void:
+	# Allow the final evaluation and system messages to reach the editor before
+	# terminating the game process.
+	await get_tree().process_frame
+	get_tree().quit(exit_code)
 
 static func start_testing():
 	var path := OS.get_environment("AutoTestPath")
@@ -193,8 +199,6 @@ static func QuitGame():
 	if Singleton.quit_requested:
 		return
 	Singleton.quit_requested = true
-
-	EngineDebugger.send_message("aps:system", [&"ExitThroughTestAction"])
 	
 	if Singleton.has_post_actions():
 		Singleton.run_post_actions()
