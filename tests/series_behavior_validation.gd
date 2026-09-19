@@ -146,6 +146,23 @@ func _run_validation() -> void:
 	_assert_true(!editor._test_passed(next_test), "An editor-detected startup failure should fail the test.")
 	editor.current_run_failure_message = ""
 
+	var collision_test := _make_test("Failure Key Collision", "uid://series-validation-failure-key-collision")
+	editor.logs.handle_debugger_message(
+		["Default Logger", "Set Data", "Failed Evals", "ordinary telemetry"],
+		collision_test.get_identity_key()
+	)
+	_assert_true(editor._test_passed(collision_test), "Ordinary telemetry named 'Failed Evals' should not fail a test.")
+	editor.logs.handle_debugger_message(
+		["Default Logger", "Failed Evaluation", "0", "real failure"],
+		collision_test.get_identity_key()
+	)
+	_assert_true(!editor._test_passed(collision_test), "A failed-evaluation event should fail a test independently of its display data.")
+	var collision_log := editor.logs.get_log_data(collision_test.get_identity_key())
+	_assert_true(collision_log["Default Logger"]["Failed Evals"] == "ordinary telemetry", "Failure rendering should preserve same-named ordinary telemetry.")
+	_assert_true(collision_log["Failed Evaluations"]["0"] == "real failure", "Failure rendering should expose evaluation details in a separate section.")
+	var all_log_data := editor.logs.get_all_log_data()
+	_assert_true(all_log_data[collision_test.get_identity_key()] == collision_log, "Complete log output should include collision-safe failed-evaluation details.")
+
 	editor.running_test_series = true
 	editor.test_has_exited_properly = false
 	next_test.premature_end_is_error = false

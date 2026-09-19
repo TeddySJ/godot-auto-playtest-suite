@@ -397,24 +397,18 @@ func _test_passed(test : AutoPlaySuiteTestResource) -> bool:
 		return false
 	
 	var test_key := test.get_identity_key()
-	if !logs.log_dictionary.has(test_key):
-		return true
-	
-	var log_dict : Dictionary = logs.log_dictionary[test_key]
-	
-	if log_dict.has(&"Default Logger"):
-		var def_log : Dictionary = log_dict[&"Default Logger"]
-		if def_log.has(&"Failed Evals"):
-			return false
+	if logs.has_failed_evaluations(test_key):
+		return false
+
 	return true
 
 func _load_log_of_current_test():
 	var test_key := current_test_view.current_test.get_identity_key()
-	if !logs.log_dictionary.has(test_key):
+	if !logs.has_log_data(test_key):
 		logs_view.set_data({"No Data":"Please run test to generate log data"})
 		return
 	
-	logs_view.set_data(logs.log_dictionary[test_key])
+	logs_view.set_data(logs.get_log_data(test_key))
 
 func _setup_environment_for_testing():
 	OS.set_environment("DoAutoTesting", "true")
