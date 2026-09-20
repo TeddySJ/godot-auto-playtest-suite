@@ -37,8 +37,12 @@ func _initialize() -> void:
 func _run_regressions() -> void:
 	_register_regression_actions()
 	_test_unexpected_end_is_an_error_by_default()
+	_test_stop_series_on_error_is_disabled_by_default()
 	_test_nonzero_runtime_exit_fails_without_evaluation_log()
+	_test_completed_queue_keeps_game_running()
+	_test_completed_runner_accepts_next_test()
 	_test_failed_main_action_runs_post_actions()
+	_test_stop_series_on_error_quits_after_failure()
 	_test_invalid_main_action_runs_post_actions()
 	_test_timed_out_main_action_runs_post_actions()
 	_test_normal_quit_runs_post_actions_with_zero_exit()
@@ -49,6 +53,7 @@ func _run_regressions() -> void:
 	_test_runtime_registries_drop_exited_nodes()
 	_test_runtime_registry_cleanup_resets_state()
 	_test_instruction_reload_unhooks_previous_instances()
+	_test_instruction_hook_is_idempotent()
 	_test_evaluator_aliases_share_one_registry_entry()
 	_test_demo_game_singleton_clears_on_exit()
 
@@ -62,6 +67,10 @@ func _run_regressions() -> void:
 func _test_unexpected_end_is_an_error_by_default() -> void:
 	var test := AutoPlaySuiteTestResource.new()
 	_expect(test.premature_end_is_error, "Unexpected test termination should be an error by default.")
+
+func _test_stop_series_on_error_is_disabled_by_default() -> void:
+	var test := AutoPlaySuiteTestResource.new()
+	_expect(!test.stop_series_on_error, "Failed evaluations should not stop a series by default.")
 
 func _test_nonzero_runtime_exit_fails_without_evaluation_log() -> void:
 	var editor := AutoPlaySuite.new()
@@ -85,6 +94,32 @@ func _register_regression_actions() -> void:
 	}
 	AutoPlaySuiteActionLibrary.add_actions_to_library(definitions)
 
+func _test_completed_queue_keeps_game_running() -> void:
+	trace.clear()
+	var runner := _create_runner()
+	var test := _create_test([ACTION_POST_ONE], [])
+	runner._start_test(test)
+	_tick_runner(runner, 1)
+
+	_expect(runner.recorded_exit_code == -1, "Completing a test should not quit the running game.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 0, false]), "Completing a test should report a reusable debugger session.")
+	_destroy_runner(runner)
+
+func _test_completed_runner_accepts_next_test() -> void:
+	trace.clear()
+	var runner := _create_runner()
+	runner._start_test(_create_test([ACTION_POST_ONE], []))
+	_tick_runner(runner, 1)
+	OS.set_environment("AutoTestRunToken", "runner-regression-next")
+	runner._start_test(_create_test([ACTION_POST_TWO], []))
+	_tick_runner(runner, 1)
+
+	_expect(trace == ["post_one", "post_two"], "A completed runner should execute the next test in the existing game state.")
+	_expect(runner.recorded_system_messages.has([&"RunStarted", "runner-regression-next"]), "The handed-off test should use its new run token.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression-next", 0, false]), "The handed-off test should finish without closing the debugger.")
+	OS.set_environment("AutoTestRunToken", "runner-regression")
+	_destroy_runner(runner)
+
 func _test_failed_main_action_runs_post_actions() -> void:
 	trace.clear()
 	var runner := _create_runner()
@@ -94,7 +129,21 @@ func _test_failed_main_action_runs_post_actions() -> void:
 
 	_expect(trace == ["fail", "post_one", "post_two"], "A failed main action should run all post-actions in order.")
 	_expect(runner.post_actions_has_been_ran, "A failed main action should mark post-actions as run.")
-	_expect(runner.recorded_exit_code == 1, "A failed main action should retain a nonzero exit code after post-actions.")
+	_expect(runner.recorded_exit_code == -1, "A failed main action should not quit when stop-series-on-error is disabled.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 1, false]), "A failed test should report failure without closing the debugger.")
+	_destroy_runner(runner)
+
+func _test_stop_series_on_error_quits_after_failure() -> void:
+	trace.clear()
+	var runner := _create_runner()
+	var test := _create_test([ACTION_FAIL], [ACTION_POST_ONE])
+	test.stop_series_on_error = true
+	runner._start_test(test)
+	_tick_runner(runner, 2)
+
+	_expect(trace == ["fail", "post_one"], "Stopping after an error should still run post-actions.")
+	_expect(runner.recorded_exit_code == 1, "Stop Series On Error should close the game with a nonzero exit code.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 1, true]), "A stopping failure should report that the debugger will close.")
 	_destroy_runner(runner)
 
 func _test_invalid_main_action_runs_post_actions() -> void:
@@ -105,7 +154,7 @@ func _test_invalid_main_action_runs_post_actions() -> void:
 	_tick_runner(runner, 1)
 
 	_expect(trace == ["post_one"], "An invalid main action should still run valid post-actions.")
-	_expect(runner.recorded_exit_code == 1, "An invalid main action should retain a nonzero exit code after post-actions.")
+	_expect(runner.recorded_exit_code == -1, "An invalid main action should not close the debugger by default.")
 	_destroy_runner(runner)
 
 func _test_timed_out_main_action_runs_post_actions() -> void:
@@ -117,7 +166,7 @@ func _test_timed_out_main_action_runs_post_actions() -> void:
 	_tick_runner(runner, 2)
 
 	_expect(trace == ["timeout", "post_one"], "A timed-out main action should still run post-actions.")
-	_expect(runner.recorded_exit_code == 1, "A timed-out main action should retain a nonzero exit code after post-actions.")
+	_expect(runner.recorded_exit_code == -1, "A timed-out main action should not close the debugger by default.")
 	_destroy_runner(runner)
 
 func _test_normal_quit_runs_post_actions_with_zero_exit() -> void:
@@ -130,7 +179,7 @@ func _test_normal_quit_runs_post_actions_with_zero_exit() -> void:
 
 	_expect(trace == ["hold", "post_one", "post_two"], "A normal quit should run all post-actions in order.")
 	_expect(runner.recorded_exit_code == 0, "A normal quit should retain a zero exit code after post-actions.")
-	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 0]), "A normal quit should report its run token and zero exit code.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 0, true]), "A normal quit should report its run token and zero exit code.")
 	_destroy_runner(runner)
 
 func _test_failed_post_action_continues_cleanup() -> void:
@@ -143,7 +192,7 @@ func _test_failed_post_action_continues_cleanup() -> void:
 
 	_expect(trace == ["hold", "fail", "post_two"], "A failed post-action should not prevent later cleanup post-actions.")
 	_expect(runner.recorded_exit_code == 1, "A failed post-action should change the final exit code to nonzero.")
-	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 1]), "A failed test should report its run token and nonzero exit code.")
+	_expect(runner.recorded_system_messages.has([&"RunFinished", "runner-regression", 1, true]), "A failed test should report its run token and nonzero exit code.")
 	_destroy_runner(runner)
 
 func _test_reused_interrupt_drops_runtime_state() -> void:
@@ -220,6 +269,14 @@ func _test_instruction_reload_unhooks_previous_instances() -> void:
 	AutoPlaySuiteInstructionLoader.refs = [probe]
 	AutoPlaySuiteInstructionLoader.LoadAllInstructions()
 	_expect(probe.unhook_count == 1, "Reloading instructions should unhook the previous instruction instances exactly once.")
+
+func _test_instruction_hook_is_idempotent() -> void:
+	AutoPlaySuiteActionLibrary.clear_library()
+	var instructions := AutoPlaySuiteInstructionSet_Default.new()
+	instructions.hook_into_suite()
+	instructions.hook_into_suite()
+	_expect(AutoPlaySuiteActionLibrary.has_action(&"[Engine] Quit"), "Calling hook_into_suite repeatedly should keep its actions available.")
+	_expect(AutoPlaySuiteActionLibrary.duplicate_action_ids.is_empty(), "Repeated hooks from one instruction set should not create duplicate action IDs.")
 
 func _test_evaluator_aliases_share_one_registry_entry() -> void:
 	AutoPlaySuiteEvaluator.clear_created_evaluators()

@@ -10,7 +10,7 @@ func _init() -> void:
 func _run_regressions() -> void:
 	await _test_reorder_first_action_above_later_action()
 	await _test_drop_mode_rearms_after_completed_drag()
-	_test_new_test_updates_unexpected_end_checkbox()
+	_test_new_test_updates_behavior_checkboxes()
 	_test_changing_action_id_clears_generic_arguments()
 	_test_extra_vars_are_editable()
 	_test_extra_vars_preserve_empty_positions()
@@ -116,13 +116,17 @@ func _test_copy_captures_an_action_snapshot() -> void:
 	tree.queue_free()
 
 
-func _test_new_test_updates_unexpected_end_checkbox() -> void:
+func _test_new_test_updates_behavior_checkboxes() -> void:
 	var view := AutoPlaySuiteUiCurrentTestView.new()
 	root.add_child(view)
 	view.new_test()
 	_expect(
 		view.premature_end_is_error.button_pressed == view.current_test.premature_end_is_error,
 		"A new test's unexpected-end checkbox should match its resource value."
+	)
+	_expect(
+		view.stop_series_on_error.button_pressed == view.current_test.stop_series_on_error,
+		"A new test's stop-series checkbox should match its resource value."
 	)
 	view.queue_free()
 

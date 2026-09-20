@@ -20,6 +20,7 @@ func _setup_session(session_id):
 	label.name = "Example plugin" # Will be used as the tab title.
 	label.text = "Example plugin"
 	var session = get_session(session_id)
+	AutoPlaySuite.Singleton._debugger_session_setup(session_id, session)
 	# Listens to the session started and stopped signals.
 	session.started.connect(AutoPlaySuite.Singleton._debugger_session_started.bind(session_id))
 	session.stopped.connect(AutoPlaySuite.Singleton._debugger_session_stopped.bind(session_id))

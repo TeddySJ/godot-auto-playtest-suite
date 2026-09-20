@@ -14,6 +14,7 @@ var post_action_list : AutoPlaySuiteActionList
 var file_dialog : FileDialog
 
 var premature_end_is_error : CheckButton
+var stop_series_on_error : CheckButton
 
 var main_actions_button : Button
 var post_actions_button : Button
@@ -83,9 +84,15 @@ func _ready() -> void:
 	
 	premature_end_is_error = CheckButton.new()
 	premature_end_is_error.position = get_position_of_next_element()
-	premature_end_is_error.text = "Unexpected End is Error"
+	premature_end_is_error.text = "Unexpected End Is Error"
 	add_child(premature_end_is_error)
 	premature_end_is_error.toggled.connect(_toggled_premature_end_is_error)
+
+	stop_series_on_error = CheckButton.new()
+	stop_series_on_error.position = get_position_of_next_element()
+	stop_series_on_error.text = "Stop Series On Error"
+	add_child(stop_series_on_error)
+	stop_series_on_error.toggled.connect(_toggled_stop_series_on_error)
 	
 	test_name_field = LineEdit.new()
 	test_name_field.position = get_position_of_next_element()
@@ -222,6 +229,7 @@ func new_test():
 	current_file_path = ""
 	current_test = AutoPlaySuiteTestResource.new()
 	premature_end_is_error.set_pressed_no_signal(current_test.premature_end_is_error)
+	stop_series_on_error.set_pressed_no_signal(current_test.stop_series_on_error)
 	var test_name : String = "test #"
 	for n in 4:
 		test_name += str(randi_range(0,9)) 
@@ -240,6 +248,7 @@ func set_current_test(new_test : AutoPlaySuiteTestResource):
 	current_test = new_test
 	test_name_field.text = current_test.test_name
 	premature_end_is_error.set_pressed_no_signal(current_test.premature_end_is_error)
+	stop_series_on_error.set_pressed_no_signal(current_test.stop_series_on_error)
 	action_list.empty_list()
 	for action in current_test.actions:
 		action_list.add_and_bind_item(action.action_id, action)	
@@ -292,6 +301,7 @@ func handle_input(event: InputEvent) -> void:
 func set_testing_in_progress(in_progress : bool) -> void:
 	test_name_field.editable = !in_progress
 	premature_end_is_error.disabled = in_progress
+	stop_series_on_error.disabled = in_progress
 	main_actions_button.disabled = in_progress || current_list == CurrentList.Main
 	post_actions_button.disabled = in_progress || current_list == CurrentList.Post
 	save_test_button.disabled = in_progress
@@ -301,5 +311,10 @@ func set_testing_in_progress(in_progress : bool) -> void:
 
 func _toggled_premature_end_is_error(on : bool):
 	current_test.premature_end_is_error = on
+	if !currently_setting_new_test:
+		signal_on_current_test_modified.emit(current_test)
+
+func _toggled_stop_series_on_error(on : bool):
+	current_test.stop_series_on_error = on
 	if !currently_setting_new_test:
 		signal_on_current_test_modified.emit(current_test)

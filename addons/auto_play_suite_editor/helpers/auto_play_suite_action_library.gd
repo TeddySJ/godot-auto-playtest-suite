@@ -30,6 +30,8 @@ static func add_actions_to_library(instruction_dictionary : Dictionary[StringNam
 			push_error("Action ID '%s' is registered by more than one instruction set and remains unavailable." % key)
 			continue
 		if possible_actions.has(key):
+			if possible_actions[key] == definition:
+				continue
 			possible_actions.erase(key)
 			duplicate_action_ids[key] = true
 			push_error("Action ID '%s' is registered by more than one instruction set and has been disabled." % key)

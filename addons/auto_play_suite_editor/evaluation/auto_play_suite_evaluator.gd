@@ -32,6 +32,7 @@ func _on_instruction(action_resource : AutoPlaySuiteActionResource):
 static func log_failed_evaluation(data):
 	EngineDebugger.send_message("aps:logging", [OS.get_environment("AutoTestRunToken"), "Default Logger", "Failed Evaluation", str(failed_evaluations), data])
 	failed_evaluations += 1
+	AutoPlaySuiteTestRunner.failed_evaluation_encountered()
 
 static func get_evaluator_by_class_name(c_name : String) -> AutoPlaySuiteEvaluator:
 	var registry_key := _get_registry_key(c_name)

@@ -64,10 +64,12 @@ var series_cancelled : bool = false
 var accumulated_test_results : Dictionary[String, bool] = {}
 var debugger_session_test_keys : Dictionary[int, String] = {}
 var debugger_session_run_ids : Dictionary[int, String] = {}
+var debugger_sessions : Dictionary[int, EditorDebuggerSession] = {}
 var current_debugger_session_id : int = -1
 var current_test_run_id : int = 0
 var current_test_run_token : String = ""
 var run_started : bool = false
+var current_run_will_quit : bool = false
 var current_run_failure_message : String = ""
 
 var current_context : CurrentContext = CurrentContext.Running
@@ -238,6 +240,9 @@ func _debugger_session_started(session_id : int) -> void:
 		return
 	current_debugger_session_id = session_id
 
+func _debugger_session_setup(session_id : int, session : EditorDebuggerSession) -> void:
+	debugger_sessions[session_id] = session
+
 func _debugger_session_stopped(session_id : int) -> void:
 	if current_debugger_session_id == session_id:
 		current_debugger_session_id = -1
@@ -366,9 +371,10 @@ func _prepare_for_testing(is_series : bool):
 	running_test_series = is_series
 	series_cancelled = false
 	accumulated_test_results.clear()
-	debugger_session_test_keys.clear()
-	debugger_session_run_ids.clear()
-	current_debugger_session_id = -1
+	if !_is_game_running():
+		debugger_session_test_keys.clear()
+		debugger_session_run_ids.clear()
+		current_debugger_session_id = -1
 	current_test_run_id = 0
 	current_test_run_token = ""
 	run_started = false
@@ -429,8 +435,8 @@ func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finishe
 	currently_running_test = test_resource
 	current_test_run_id += 1
 	current_test_run_token = "%d-%d" % [Time.get_ticks_usec(), current_test_run_id]
-	current_debugger_session_id = -1
 	run_started = false
+	current_run_will_quit = false
 	current_run_failure_message = ""
 	var path := test_series_view._get_test_uid_path(test_resource)
 	_set_current_test_file_path_environment(path)
@@ -439,16 +445,29 @@ func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finishe
 	received_exit_message = false
 	current_test_exit_code = 0
 	
-	EditorInterface.play_main_scene()
-	var started_successfully := await _wait_until_run_starts()
-	if !started_successfully:
+	var start_requested := true
+	if _is_game_running():
+		start_requested = _send_test_to_running_game(path, current_test_run_token)
+		if !start_requested:
+			_record_current_run_failure("The running game does not have an active Auto Play Suite debugger session.")
+			_stop_game()
+	else:
+		current_debugger_session_id = -1
+		EditorInterface.play_main_scene()
+	var started_successfully := false
+	if start_requested:
+		started_successfully = await _wait_until_run_starts()
+	if start_requested && !started_successfully:
 		if _is_game_running():
 			_record_current_run_failure("The game started, but the Auto Play Suite runner did not report in within %.1f seconds." % [float(RUN_START_TIMEOUT_MSEC) / 1000.0])
 			_stop_game()
 		else:
 			_record_current_run_failure("The game exited before the Auto Play Suite runner reported that it had started.")
-	await _wait_until_game_exits()
-	await _wait_for_exit_message()
+	await _wait_until_run_finishes_or_game_exits()
+	if current_run_will_quit:
+		await _wait_until_game_exits()
+	if !received_exit_message:
+		await _wait_for_exit_message()
 	
 	_on_test_ended(test_resource)
 	if _should_cancel_series_after_test(test_resource):
@@ -456,9 +475,11 @@ func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finishe
 	call_on_finished.call()
 
 func _should_cancel_series_after_test(test_resource : AutoPlaySuiteTestResource) -> bool:
-	# Godot does not distinguish editor Stop, a crash, and an allowed direct exit.
-	# Abort only when the test declares an unexpected exit to be an error.
-	return running_test_series && !test_has_exited_properly && test_resource.premature_end_is_error
+	return (
+		running_test_series
+		&& test_resource.stop_series_on_error
+		&& logs.has_failed_evaluations(test_resource.get_identity_key())
+	)
 
 func _set_current_test_file_path_environment(path : String):
 	OS.set_environment("AutoTestPath", path)
@@ -498,6 +519,18 @@ func _wait_until_game_exits() -> void:
 	await get_tree().process_frame
 	while _is_game_running():
 		await get_tree().process_frame
+
+func _wait_until_run_finishes_or_game_exits() -> void:
+	await get_tree().process_frame
+	while _is_game_running() && !received_exit_message:
+		await get_tree().process_frame
+
+func _send_test_to_running_game(path : String, run_token : String) -> bool:
+	var session : EditorDebuggerSession = debugger_sessions.get(current_debugger_session_id)
+	if session == null || !session.is_active():
+		return false
+	session.send_message("aps:start_test", [path, run_token])
+	return true
 
 func _wait_until_run_starts(timeout_msec : int = RUN_START_TIMEOUT_MSEC) -> bool:
 	var deadline := Time.get_ticks_msec() + timeout_msec
@@ -581,3 +614,5 @@ func _system_message_received(data : Array, session_id : int):
 		received_exit_message = true
 		if data.size() > 2:
 			current_test_exit_code = int(data[2])
+		if data.size() > 3:
+			current_run_will_quit = bool(data[3])

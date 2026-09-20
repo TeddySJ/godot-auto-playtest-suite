@@ -23,15 +23,22 @@ var running_post_actions : bool = false
 var last_process_ticks_msec : int = 0
 var exit_code_after_post_actions : int = 0
 var run_token : String = ""
+var run_finished : bool = false
+var registered_debugger_capture : bool = false
 
 func _ready() -> void:
 	Singleton = self
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	if EngineDebugger.is_active() && !EngineDebugger.has_capture(&"aps"):
+		EngineDebugger.register_message_capture(&"aps", _capture_debugger_message)
+		registered_debugger_capture = true
 
 func _exit_tree() -> void:
 	if Singleton != self:
 		return
 	Singleton = null
+	if registered_debugger_capture && EngineDebugger.has_capture(&"aps"):
+		EngineDebugger.unregister_message_capture(&"aps")
 	AutoPlaySuiteHookNode.initialized = false
 	_clear_test_services()
 
@@ -41,6 +48,7 @@ func _start_test(test : AutoPlaySuiteTestResource):
 	running_post_actions = false
 	post_actions_has_been_ran = false
 	exit_code_after_post_actions = 0
+	run_finished = false
 	run_token = OS.get_environment("AutoTestRunToken")
 	_send_system_message([&"RunStarted", run_token])
 	test_resource = null
@@ -119,13 +127,14 @@ func _run_current_action():
 		current_action_instruction.on_enter.call(current_action)
 
 func _fail_test(message : String) -> void:
-	if is_quitting:
+	if is_quitting || run_finished:
 		return
 	exit_code_after_post_actions = 1
-	quit_requested = true
 	push_error(message)
-	AutoPlaySuiteEvaluator.log_failed_evaluation(message)
 	current_action = null
+	AutoPlaySuiteEvaluator.log_failed_evaluation(message)
+	if test_resource != null && test_resource.stop_series_on_error:
+		return
 	if running_post_actions:
 		_progress_testing()
 		return
@@ -133,7 +142,7 @@ func _fail_test(message : String) -> void:
 	if has_post_actions() && !post_actions_has_been_ran:
 		run_post_actions()
 	else:
-		_quit_game(exit_code_after_post_actions)
+		_finish_current_test()
 
 func _progress_testing():
 	if actions_to_do.size() > 0:
@@ -147,8 +156,10 @@ func _progress_testing():
 			_end_current_test()
 
 func _end_current_test():
-	_testing_finished()
-	_fail_test("The main action queue finished without requesting a test exit.")
+	if has_post_actions() && !post_actions_has_been_ran:
+		run_post_actions()
+	else:
+		_finish_current_test()
 
 func _testing_finished():
 	print("Testing finished!")
@@ -171,17 +182,59 @@ func run_post_actions():
 
 func _finish_post_actions() -> void:
 	running_post_actions = false
+	_finish_current_test()
+
+func _finish_current_test() -> void:
+	if run_finished:
+		return
 	_testing_finished()
-	_quit_game(exit_code_after_post_actions)
+	if AutoPlaySuiteEvaluator.failed_evaluations > 0:
+		exit_code_after_post_actions = 1
+	var stop_after_failure := (
+		test_resource != null
+		&& test_resource.stop_series_on_error
+		&& exit_code_after_post_actions != 0
+	)
+	if quit_requested || stop_after_failure:
+		_quit_game(exit_code_after_post_actions)
+	else:
+		_finish_run(exit_code_after_post_actions, false)
 
 func _quit_game(exit_code : int) -> void:
-	if is_quitting:
+	if is_quitting || run_finished:
 		return
 	is_quitting = true
+	_finish_run(exit_code, true)
+
+func _finish_run(exit_code : int, will_quit : bool) -> void:
+	if run_finished:
+		return
+	run_finished = true
 	current_action = null
 	actions_to_do.clear()
-	_send_system_message([&"RunFinished", run_token, exit_code])
-	_quit_after_debugger_flush(exit_code)
+	_send_system_message([&"RunFinished", run_token, exit_code, will_quit])
+	_clear_test_services()
+	if will_quit:
+		_quit_after_debugger_flush(exit_code)
+
+func _on_failed_evaluation() -> void:
+	if is_quitting || run_finished || test_resource == null || !test_resource.stop_series_on_error:
+		return
+	exit_code_after_post_actions = 1
+	quit_requested = true
+	current_action = null
+	if running_post_actions:
+		_progress_testing()
+		return
+	actions_to_do.clear()
+	if has_post_actions() && !post_actions_has_been_ran:
+		run_post_actions()
+	else:
+		_finish_current_test()
+
+static func failed_evaluation_encountered() -> void:
+	if is_instance_valid(Singleton) && !Singleton.is_queued_for_deletion():
+		Singleton._on_failed_evaluation()
 
 func _send_system_message(data : Array) -> void:
 	EngineDebugger.send_message("aps:system", data)
@@ -196,7 +249,6 @@ static func start_testing():
 	var path := OS.get_environment("AutoTestPath")
 	var test : AutoPlaySuiteTestResource = load(path)
 	_run_test.call_deferred(test)
-	_create_default_logger()
 
 static func _create_default_logger() -> void:
 	var logger : AutoPlaySuiteLogger = AutoPlaySuiteLogger.get_default_logger()
@@ -215,7 +267,27 @@ static func _run_test(test : AutoPlaySuiteTestResource):
 	AutoPlaySuiteInstructionLoader.LoadAllInstructions()
 	
 	var test_runner := AutoPlaySuiteTestRunner.instance()
+	_clear_test_services()
+	_create_default_logger()
 	test_runner._start_test(test)
+
+func _capture_debugger_message(message : String, data : Array) -> bool:
+	if message != "start_test":
+		return false
+	if data.size() < 2:
+		push_error("Cannot start the next auto play test without a resource path and run token.")
+		return true
+	_start_test_from_debugger.call_deferred(str(data[0]), str(data[1]))
+	return true
+
+func _start_test_from_debugger(path : String, next_run_token : String) -> void:
+	if tests_are_running || (!run_finished && test_resource != null):
+		push_error("Cannot start another auto play test while one is still running.")
+		return
+	OS.set_environment("AutoTestPath", path)
+	OS.set_environment("AutoTestRunToken", next_run_token)
+	var next_test := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP) as AutoPlaySuiteTestResource
+	_run_test(next_test)
 
 static func QuitGame():
 	if !is_instance_valid(Singleton) || Singleton.is_queued_for_deletion():
@@ -229,7 +301,7 @@ static func QuitGame():
 	if Singleton.has_post_actions():
 		Singleton.run_post_actions()
 	else:
-		Singleton._quit_game(0)
+		Singleton._finish_current_test()
 
 static func instance() -> AutoPlaySuiteTestRunner:
 	if is_instance_valid(Singleton) && !Singleton.is_queued_for_deletion():

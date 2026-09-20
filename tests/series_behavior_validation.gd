@@ -164,11 +164,14 @@ func _run_validation() -> void:
 	_assert_true(all_log_data[collision_test.get_identity_key()] == collision_log, "Complete log output should include collision-safe failed-evaluation details.")
 
 	editor.running_test_series = true
-	editor.test_has_exited_properly = false
-	next_test.premature_end_is_error = false
-	_assert_true(!editor._should_cancel_series_after_test(next_test), "An allowed direct exit should not cancel the remaining series.")
-	next_test.premature_end_is_error = true
-	_assert_true(editor._should_cancel_series_after_test(next_test), "An unexpected exit configured as an error should cancel the remaining series.")
+	next_test.stop_series_on_error = false
+	_assert_true(!editor._should_cancel_series_after_test(next_test), "A failed evaluation should not cancel the series by default.")
+	next_test.stop_series_on_error = true
+	editor.logs.handle_debugger_message(
+		["Default Logger", "Failed Evaluation", "0", "stop the series"],
+		next_test.get_identity_key()
+	)
+	_assert_true(editor._should_cancel_series_after_test(next_test), "A failed evaluation should cancel a test whose stop-series option is enabled.")
 
 	view.queue_free()
 	editor.free()
