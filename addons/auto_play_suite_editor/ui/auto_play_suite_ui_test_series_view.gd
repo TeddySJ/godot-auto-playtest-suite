@@ -15,6 +15,8 @@ var load_series_button : Button
 var save_series_button : Button
 var save_series_as_button : Button
 var remove_test_button : Button
+var move_test_left_button : Button
+var move_test_right_button : Button
 
 var load_test_button : Button
 var new_test_button : Button
@@ -27,6 +29,9 @@ var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 var current_selected_index : int = -1
 var current_test_series : AutoPlaySuiteTestSeriesResource
 var testing_in_progress : bool = false
+var dirty_tests : Dictionary[AutoPlaySuiteTestResource, bool]
+var series_has_unsaved_changes : bool = false
+var confirmation_dialog : ConfirmationDialog
 
 signal signal_on_current_test_series_saved
 signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
@@ -36,6 +41,7 @@ signal signal_on_run_all_tests_pressed
 
 signal signal_on_new_test_button_pressed
 signal signal_on_load_test_button_pressed
+signal signal_on_before_series_operation
 
 func _ready() -> void:
 	if current_test_series == null:
@@ -131,14 +137,36 @@ func _ready() -> void:
 	remove_test_button.pressed.connect(_remove_test_button_pressed)
 	add_child(remove_test_button)
 
-func _new_series_button_pressed():
+	move_test_left_button = Button.new()
+	move_test_left_button.text = "Move Left"
+	move_test_left_button.position = remove_test_button.position + Vector2(0, 50) * ed_scale
+	move_test_left_button.pressed.connect(_move_selected_test.bind(-1))
+	add_child(move_test_left_button)
+
+	move_test_right_button = Button.new()
+	move_test_right_button.text = "Move Right"
+	move_test_right_button.position = move_test_left_button.position + Vector2(0, 50) * ed_scale
+	move_test_right_button.pressed.connect(_move_selected_test.bind(1))
+	add_child(move_test_right_button)
+	_update_test_order_buttons()
+
+func _new_series_button_pressed(discard_confirmed : bool = false):
 	if testing_in_progress:
+		return
+	signal_on_before_series_operation.emit()
+	if !discard_confirmed && has_unsaved_work():
+		_show_discard_confirmation(
+			"Discard the current series and its unsaved test changes?",
+			_new_series_button_pressed.bind(true)
+		)
 		return
 	clear()
 	current_selected_index = -1
+	_update_test_order_buttons()
 	current_file_path = ""
 	current_test_series = AutoPlaySuiteTestSeriesResource.new()
 	_randomize_test_series_name()
+	series_has_unsaved_changes = true
 	signal_on_new_series.emit()
 
 func _can_save_series(output_error_reason : bool = true) -> bool:
@@ -174,6 +202,7 @@ func _can_save_series(output_error_reason : bool = true) -> bool:
 func _save_test_series(path : String = "") -> bool:
 	if file_dialog != null:
 		return false
+	signal_on_before_series_operation.emit()
 	
 	if !_can_save_series():
 		return false
@@ -190,12 +219,14 @@ func _save_test_series(path : String = "") -> bool:
 		printerr("Failed to save test series to '%s': error %d" % [path, save_error])
 		return false
 	current_file_path = path
+	series_has_unsaved_changes = false
 	signal_on_current_test_series_saved.emit()
 	return true
 
 func _save_test_series_as():
 	if file_dialog != null:
 		return
+	signal_on_before_series_operation.emit()
 	if !_can_save_series():
 		return
 	
@@ -211,8 +242,15 @@ func _save_file_chosen(path : String):
 	file_dialog = null
 	_save_test_series(path)
 
-func _load_series_button_pressed():
+func _load_series_button_pressed(discard_confirmed : bool = false):
 	if file_dialog != null:
+		return
+	signal_on_before_series_operation.emit()
+	if !discard_confirmed && has_unsaved_work():
+		_show_discard_confirmation(
+			"Discard the current series and its unsaved test changes before loading another series?",
+			_load_series_button_pressed.bind(true)
+		)
 		return
 	
 	file_dialog = FileDialog.new()
@@ -286,10 +324,12 @@ func _set_current_series(new_series : AutoPlaySuiteTestSeriesResource) -> bool:
 		add_test(test, false)
 	
 	_test_button_pressed(test_button_list[0])
+	series_has_unsaved_changes = false
 	return true
 
 func _test_series_name_changed(new_text : String):
 	current_test_series.test_series_name = new_text
+	series_has_unsaved_changes = true
 
 func _randomize_test_series_name():
 	var rand_name : String = "Series #"
@@ -322,7 +362,9 @@ func add_test(test_resource : AutoPlaySuiteTestResource, add_to_series : bool = 
 	if add_to_series:
 		current_test_series.paths_to_tests.append("")
 		current_test_series.number_of_runs_per_test.append(1)
+		series_has_unsaved_changes = true
 		_test_button_pressed(button)
+	dirty_tests[test_resource] = add_to_series && test_resource.test_uid.is_empty()
 	
 	return true
 
@@ -337,18 +379,28 @@ func _on_test_failed_or_passed_test(test : AutoPlaySuiteTestResource, success : 
 		test_button_list[index].modulate = Color.WHITE
 		
 
-func _remove_test_button_pressed():
+func _remove_test_button_pressed(discard_confirmed : bool = false):
 	if current_selected_index < 0 || current_selected_index >= test_button_list.size():
 		printerr("Cannot remove a test without a valid series selection.")
+		return
+	signal_on_before_series_operation.emit()
+	var selected_test : AutoPlaySuiteTestResource = underlying_dictionary[test_button_list[current_selected_index]]
+	if !discard_confirmed && dirty_tests.get(selected_test, false):
+		_show_discard_confirmation(
+			"Remove this test and discard its unsaved changes?",
+			_remove_test_button_pressed.bind(true)
+		)
 		return
 
 	var removed_index := current_selected_index
 	var removed_button := test_button_list[removed_index]
+	dirty_tests.erase(selected_test)
 	current_test_series.paths_to_tests.remove_at(current_selected_index)
 	current_test_series.number_of_runs_per_test.remove_at(current_selected_index)
 	underlying_dictionary.erase(removed_button)
 	removed_button.queue_free()
 	test_button_list.remove_at(current_selected_index)
+	series_has_unsaved_changes = true
 	
 	if test_button_list.size() == 0:
 		_on_all_tests_removed()
@@ -359,7 +411,39 @@ func _remove_test_button_pressed():
 
 func _on_all_tests_removed():
 	current_selected_index = -1
+	_update_test_order_buttons()
 	signal_on_new_test_button_pressed.emit()
+
+func _move_selected_test(offset : int) -> void:
+	if testing_in_progress:
+		return
+	var destination := current_selected_index + offset
+	if current_selected_index < 0 || destination < 0 || destination >= test_button_list.size():
+		return
+
+	var moved_button := test_button_list[current_selected_index]
+	test_button_list[current_selected_index] = test_button_list[destination]
+	test_button_list[destination] = moved_button
+	var moved_path := current_test_series.paths_to_tests[current_selected_index]
+	current_test_series.paths_to_tests[current_selected_index] = current_test_series.paths_to_tests[destination]
+	current_test_series.paths_to_tests[destination] = moved_path
+	var moved_run_count := current_test_series.number_of_runs_per_test[current_selected_index]
+	current_test_series.number_of_runs_per_test[current_selected_index] = current_test_series.number_of_runs_per_test[destination]
+	current_test_series.number_of_runs_per_test[destination] = moved_run_count
+	hbox_container.move_child(test_button_list[destination], destination)
+	current_selected_index = destination
+	series_has_unsaved_changes = true
+	_update_test_order_buttons()
+
+func _update_test_order_buttons() -> void:
+	if move_test_left_button == null || move_test_right_button == null:
+		return
+	move_test_left_button.disabled = testing_in_progress || current_selected_index <= 0
+	move_test_right_button.disabled = (
+		testing_in_progress
+		|| current_selected_index < 0
+		|| current_selected_index >= test_button_list.size() - 1
+	)
 
 func _on_run_current_test_button_pressed():
 	if testing_in_progress:
@@ -369,6 +453,7 @@ func _on_run_current_test_button_pressed():
 func _on_run_all_tests_button_pressed():
 	if testing_in_progress:
 		return
+	signal_on_before_series_operation.emit()
 	for uid in current_test_series.paths_to_tests:
 		if uid == "":
 			printerr("One or more of the tests in the series has not been saved to disk yet!")
@@ -426,10 +511,12 @@ func _get_test_uid_path(test_resource : AutoPlaySuiteTestResource) -> String:
 func _test_button_pressed(button_pressed : Button):
 	if testing_in_progress:
 		return
+	signal_on_before_series_operation.emit()
 	for button in test_button_list:
 		button.disabled = false
 	current_selected_index = test_button_list.find(button_pressed)
 	button_pressed.disabled = true
+	_update_test_order_buttons()
 	_change_to_test(underlying_dictionary[button_pressed])
 
 func _change_to_test(test_resource : AutoPlaySuiteTestResource):
@@ -439,13 +526,60 @@ func _update_path_to_current_test(new_path : String):
 	if current_selected_index < 0 || current_selected_index >= current_test_series.paths_to_tests.size():
 		printerr("Cannot update a test path without a valid series selection.")
 		return
+	if current_test_series.paths_to_tests[current_selected_index] == new_path:
+		return
 	current_test_series.paths_to_tests[current_selected_index] = new_path
+	series_has_unsaved_changes = true
+
+func mark_test_dirty(test : AutoPlaySuiteTestResource) -> void:
+	if test != null && underlying_dictionary.values().has(test):
+		dirty_tests[test] = true
+
+func mark_action_dirty(action : AutoPlaySuiteActionResource) -> void:
+	if action == null:
+		return
+	for test : AutoPlaySuiteTestResource in underlying_dictionary.values():
+		if test.actions.has(action) || test.post_actions.has(action):
+			dirty_tests[test] = true
+			return
+
+func mark_test_saved(test : AutoPlaySuiteTestResource) -> void:
+	if test != null && dirty_tests.has(test):
+		dirty_tests[test] = false
+
+func has_unsaved_work() -> bool:
+	if series_has_unsaved_changes:
+		return true
+	for is_dirty in dirty_tests.values():
+		if is_dirty:
+			return true
+	return false
+
+func _show_discard_confirmation(message : String, confirmed_callback : Callable) -> void:
+	if is_instance_valid(confirmation_dialog):
+		return
+	confirmation_dialog = ConfirmationDialog.new()
+	confirmation_dialog.dialog_text = message
+	confirmation_dialog.confirmed.connect(_on_discard_confirmed.bind(confirmed_callback))
+	confirmation_dialog.canceled.connect(_clear_confirmation_dialog)
+	add_child(confirmation_dialog)
+	confirmation_dialog.popup_centered()
+
+func _on_discard_confirmed(confirmed_callback : Callable) -> void:
+	_clear_confirmation_dialog()
+	confirmed_callback.call()
+
+func _clear_confirmation_dialog() -> void:
+	if is_instance_valid(confirmation_dialog):
+		confirmation_dialog.queue_free()
+	confirmation_dialog = null
 
 func clear():
 	for button in test_button_list:
 		button.queue_free()
 	test_button_list.clear()
 	underlying_dictionary.clear()
+	dirty_tests.clear()
 
 func set_testing_in_progress(in_progress : bool) -> void:
 	testing_in_progress = in_progress
@@ -461,4 +595,5 @@ func set_testing_in_progress(in_progress : bool) -> void:
 	run_all_tests_button.disabled = in_progress
 	for index in test_button_list.size():
 		test_button_list[index].disabled = in_progress || index == current_selected_index
+	_update_test_order_buttons()
 	

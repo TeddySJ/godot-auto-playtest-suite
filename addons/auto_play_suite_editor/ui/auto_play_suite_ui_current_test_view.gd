@@ -36,6 +36,10 @@ signal signal_on_test_name_changed(new_name)
 signal signal_on_action_list_item_selected(action_resource)
 signal signal_on_current_test_saved(uid_string)
 signal signal_on_action_list_changed
+signal signal_on_current_test_modified(test : AutoPlaySuiteTestResource)
+signal signal_on_before_test_change
+signal signal_on_before_test_save
+signal signal_on_before_action_context_change
 
 func _ready() -> void:
 	
@@ -134,6 +138,7 @@ func _on_selected_action_id_changed(new_id : String):
 func _save_test(path : String = "") -> bool:
 	if file_dialog != null:
 		return false
+	signal_on_before_test_save.emit()
 
 	_sync_current_test_to_list()
 	if !_print_validation_errors():
@@ -172,6 +177,7 @@ func _save_test(path : String = "") -> bool:
 	return true
 
 func _save_test_as():
+	signal_on_before_test_save.emit()
 	_sync_current_test_to_list()
 	if !_print_validation_errors():
 		return
@@ -197,22 +203,25 @@ func _save_file_chosen(path : String):
 	file_dialog = null
 	_save_test(path)
 
-func _sync_current_test_to_list():
+func _sync_current_test_to_list(action_was_modified : bool = false):
 	if currently_setting_new_test:
 		return
 	
-	current_test.actions.clear()
 	var all_actions : Array = action_list.get_all_items()
-	current_test.actions.append_array(all_actions)
-	
-	current_test.post_actions.clear()
-	all_actions = post_action_list.get_all_items()
-	current_test.post_actions.append_array(all_actions)
+	var all_post_actions : Array = post_action_list.get_all_items()
+	var list_was_modified := current_test.actions != all_actions || current_test.post_actions != all_post_actions
+	if list_was_modified:
+		current_test.actions.assign(all_actions)
+		current_test.post_actions.assign(all_post_actions)
+	if list_was_modified || action_was_modified:
+		signal_on_current_test_modified.emit(current_test)
 
 func new_test():
+	signal_on_before_test_change.emit()
 	currently_setting_new_test = true
 	current_file_path = ""
 	current_test = AutoPlaySuiteTestResource.new()
+	premature_end_is_error.set_pressed_no_signal(current_test.premature_end_is_error)
 	var test_name : String = "test #"
 	for n in 4:
 		test_name += str(randi_range(0,9)) 
@@ -226,10 +235,11 @@ func new_test():
 	
 	
 func set_current_test(new_test : AutoPlaySuiteTestResource):
+	signal_on_before_test_change.emit()
 	currently_setting_new_test = true
 	current_test = new_test
 	test_name_field.text = current_test.test_name
-	premature_end_is_error.button_pressed = current_test.premature_end_is_error
+	premature_end_is_error.set_pressed_no_signal(current_test.premature_end_is_error)
 	action_list.empty_list()
 	for action in current_test.actions:
 		action_list.add_and_bind_item(action.action_id, action)	
@@ -242,6 +252,7 @@ func _file_dialog_canceled():
 	file_dialog = null
 
 func _set_list_to_main_actions():
+	signal_on_before_action_context_change.emit()
 	current_list = CurrentList.Main
 	action_list.visible = true
 	post_action_list.visible = false
@@ -250,6 +261,7 @@ func _set_list_to_main_actions():
 	signal_on_action_list_changed.emit()
 
 func _set_list_to_post_actions():
+	signal_on_before_action_context_change.emit()
 	current_list = CurrentList.Post
 	action_list.visible = false
 	post_action_list.visible = true
@@ -264,6 +276,8 @@ func deselect_all():
 func _test_name_field_changed(new_name : String):
 	current_test.test_name = new_name
 	signal_on_test_name_changed.emit(new_name)
+	if !currently_setting_new_test:
+		signal_on_current_test_modified.emit(current_test)
 
 func _set_file_dialog_size_and_position():
 	file_dialog.min_size = Vector2(600, 400) * AutoPlaySuite._get_plugin_singleton().editor_scale
@@ -287,3 +301,5 @@ func set_testing_in_progress(in_progress : bool) -> void:
 
 func _toggled_premature_end_is_error(on : bool):
 	current_test.premature_end_is_error = on
+	if !currently_setting_new_test:
+		signal_on_current_test_modified.emit(current_test)

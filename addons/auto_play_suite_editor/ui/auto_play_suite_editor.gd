@@ -84,12 +84,19 @@ signal signal_on_test_passed_or_failed_evaluation(test, success)
 
 static func set_and_show_popup(new_popup : Popup):
 	if is_instance_valid(shared_popup):
-		shared_popup.hide()
+		shared_popup.queue_free()
 	shared_popup = null
 	if !is_instance_valid(new_popup):
 		return
 	shared_popup = new_popup
+	shared_popup.popup_hide.connect(_on_shared_popup_hidden.bind(shared_popup), CONNECT_ONE_SHOT)
 	shared_popup.show()
+
+static func _on_shared_popup_hidden(popup : Popup) -> void:
+	if shared_popup == popup:
+		shared_popup = null
+	if is_instance_valid(popup):
+		popup.queue_free()
 	
 static func _get_plugin_singleton() -> AutoPlaySuite:
 	var root := EditorInterface.get_base_control()
@@ -171,7 +178,7 @@ func setup_ui() -> void:
 	var right_side_view_position := Vector2(430, 100) * ed_scale
 	
 	action_view = AutoPlaySuiteUiActionView.new()
-	action_view.signal_on_action_changed.connect(current_test_view._sync_current_test_to_list)
+	action_view.signal_on_action_changed.connect(_on_action_changed)
 	add_child(action_view)
 	action_view.position = right_side_view_position
 	action_view._add_drop_down_item(&"[UNSET]")
@@ -185,7 +192,7 @@ func setup_ui() -> void:
 	#run_all_button.position = run_test_button.position + Vector2(100, 0) * ed_scale
 
 	show_logs_button = Button.new()
-	show_logs_button.position = action_view.position + Vector2(0, 430) * ed_scale
+	show_logs_button.position = action_view.position + Vector2(0, action_view.main_panel.custom_minimum_size.y + 30 * ed_scale)
 	show_logs_button.text = "Show Logs"
 	add_child(show_logs_button)
 	show_logs_button.pressed.connect(_show_logger)
@@ -211,7 +218,12 @@ func setup_ui() -> void:
 	current_test_view.signal_on_test_name_changed.connect(test_series_view.current_test_name_changed)
 	current_test_view.signal_on_action_list_item_selected.connect(_on_action_list_item_selected)
 	current_test_view.signal_on_current_test_saved.connect(_on_current_test_saved)
+	current_test_view.signal_on_current_test_modified.connect(test_series_view.mark_test_dirty)
 	current_test_view.signal_on_action_list_changed.connect(_current_action_list_changed)
+	current_test_view.signal_on_before_test_change.connect(action_view.commit_pending_edits)
+	current_test_view.signal_on_before_test_save.connect(action_view.commit_pending_edits)
+	current_test_view.signal_on_before_action_context_change.connect(action_view.commit_pending_edits)
+	test_series_view.signal_on_before_series_operation.connect(action_view.commit_pending_edits)
 	
 	signal_on_test_passed_or_failed_evaluation.connect(test_series_view._on_test_failed_or_passed_test)
 
@@ -535,8 +547,19 @@ func _on_action_list_item_selected(action_resource):
 	action_view._set_action(action_resource)
 	_show_action_view()
 
+func _on_action_changed(action_resource : AutoPlaySuiteActionResource) -> void:
+	var action_is_in_current_view := (
+		current_test_view.action_list.get_all_items().has(action_resource)
+		|| current_test_view.post_action_list.get_all_items().has(action_resource)
+	)
+	if action_is_in_current_view:
+		current_test_view._sync_current_test_to_list(true)
+	else:
+		test_series_view.mark_action_dirty(action_resource)
+
 func _on_current_test_saved(uid_string : String):
 	test_series_view._update_path_to_current_test(uid_string)
+	test_series_view.mark_test_saved(current_test_view.current_test)
 
 func _system_message_received(data : Array, session_id : int):
 	if data.size() < 2 || currently_running_test == null:

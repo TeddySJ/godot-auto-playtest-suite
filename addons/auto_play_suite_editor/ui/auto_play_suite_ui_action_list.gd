@@ -66,6 +66,9 @@ func _create_right_click_thing():
 	if item_count == 0:
 		if root.get_child_count() == 0:
 			popup.add_item("Add Entry", PopupChoice.AddEntry)
+			if !copied_values.is_empty():
+				popup.add_separator()
+				popup.add_item("Paste", PopupChoice.Paste)
 		else:
 			return
 	
@@ -141,7 +144,9 @@ func _copy_entries():
 	_add_entries_to_buffer(list_of_actions)
 
 func _paste_entries():
-	var start_index = get_index_of_tree_item(currently_selected)
+	var start_index : int = -1
+	if currently_selected != null && backing_dictionary.has(currently_selected):
+		start_index = get_index_of_tree_item(currently_selected)
 	for n in copied_keys.size():
 		var reverse_index = copied_keys.size() - 1 - n
 		add_and_bind_item(copied_keys[reverse_index], copied_values[reverse_index].duplicate(true), start_index + 1)
@@ -152,7 +157,7 @@ func _add_entries_to_buffer(entries  : Array):
 	
 	for entry : TreeItem in entries:
 		copied_keys.append(entry.get_text(0))
-		copied_values.append(backing_dictionary[entry])
+		copied_values.append(backing_dictionary[entry].duplicate(true))
 
 func add_default_entry(at_index : int):
 	at_index = clamp(at_index, 0, get_item_count())

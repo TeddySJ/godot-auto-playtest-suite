@@ -24,6 +24,7 @@ func add_and_bind_item(text : String, value, at_index : int = -1):
 func remove_item(to_remove : TreeItem):
 	backing_dictionary.erase(to_remove)
 	root.remove_child(to_remove)
+	to_remove.free()
 	signal_on_item_removed.emit()
 	
 func remove_item_at_index(index : int):
@@ -33,19 +34,6 @@ func _ready():
 	root = create_item()
 	cell_selected.connect(_on_cell_selected)
 	hide_root = true
-
-func _get_amount_dragged(dragged_source) -> int:
-	if dragged_source == null:
-		return 0
-	
-	var ret : int = 1
-	var current = get_next_selected(dragged_source)
-	
-	while current != dragged_source:
-		if current != null:
-			ret += 1
-		current = get_next_selected(current)
-	return ret
 
 func get_top_selected() -> TreeItem:
 	return get_next_selected(null)
@@ -97,8 +85,6 @@ func get_item_count() -> int:
 
 func _get_drag_data(at_position: Vector2):
 	var it := get_item_at_position(at_position)
-	print(str(_get_amount_dragged(it)))
-	
 	if it == null: return null
 	var p := Label.new()
 	p.text = it.get_text(0)
@@ -114,15 +100,12 @@ func _drop_data(at_position: Vector2, data):
 	if to == null or from == to:
 		return
 	var section := get_drop_section_at_position(at_position) # -1 = above, 1 = below
-	var all_selected = get_all_selected()
-	
-	var index_of_to = get_index_of_tree_item(to) + 1 if section > 0 else 0
-	
-	for item in all_selected:
-		if item == to:
-			return
-		if get_index_of_tree_item(item) == index_of_to:
-			return
+	if section == 0:
+		return
+	var all_selected := get_all_selected()
+	if all_selected.is_empty() || all_selected.has(to):
+		return
+	var order_before := root.get_children()
 	
 	var first_item = all_selected[0]
 	
@@ -136,7 +119,8 @@ func _drop_data(at_position: Vector2, data):
 			continue
 		all_selected[n].move_after(all_selected[n-1])
 	
-	signal_on_item_order_changed.emit()
+	if root.get_children() != order_before:
+		signal_on_item_order_changed.emit()
 
 func _on_cell_selected() -> void:
 	last_selected = currently_selected

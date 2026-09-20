@@ -53,7 +53,7 @@ func _run_validation() -> void:
 	view._update_path_to_current_test(second.test_uid)
 
 	view.current_file_path = "res://tests/previous-series.testseries.tres"
-	view._new_series_button_pressed()
+	view._new_series_button_pressed(true)
 	_assert_true(view.current_file_path.is_empty(), "A new series should not retain the previous save path.")
 	_assert_true(!view.current_test_series.test_series_name.is_empty(), "A new series should store its generated name.")
 
