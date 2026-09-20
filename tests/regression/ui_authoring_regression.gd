@@ -9,6 +9,7 @@ func _init() -> void:
 
 func _run_regressions() -> void:
 	await _test_reorder_first_action_above_later_action()
+	await _test_drop_mode_rearms_after_completed_drag()
 	_test_new_test_updates_unexpected_end_checkbox()
 	_test_changing_action_id_clears_generic_arguments()
 	_test_extra_vars_are_editable()
@@ -51,6 +52,51 @@ func _test_reorder_first_action_above_later_action() -> void:
 		func(action : AutoPlaySuiteActionResource) -> StringName: return action.action_id
 	)
 	_expect(actual_order == [&"B", &"A", &"C"], "The first action should move above a later target.")
+	tree.queue_free()
+
+
+func _test_drop_mode_rearms_after_completed_drag() -> void:
+	var tree := AutoPlaySuiteActionList.new()
+	root.add_child(tree)
+	tree.size = Vector2(400, 400)
+	for action_id : StringName in [&"A", &"B", &"C"]:
+		tree.add_and_bind_item(action_id, AutoPlaySuiteActionResource.Create(action_id))
+	await process_frame
+
+	var first_item := tree.root.get_child(0)
+	first_item.select(0)
+	var first_target := tree.root.get_child(2)
+	var first_target_rect := tree.get_item_area_rect(first_target, 0)
+	var above_first_target := first_target_rect.position + Vector2(4.0, 1.0)
+	var first_drag_data := {"from": first_item}
+	_expect(tree._can_drop_data(above_first_target, first_drag_data), "The first reorder should be accepted.")
+	tree._drop_data(above_first_target, first_drag_data)
+	await process_frame
+
+	tree.notification(Node.NOTIFICATION_DRAG_END)
+	_expect(
+		tree.drop_mode_flags == Tree.DROP_MODE_DISABLED,
+		"Godot should disable the tree's drop mode after a completed drag."
+	)
+
+	tree.deselect_all()
+	var second_item := tree.root.get_child(0)
+	second_item.select(0)
+	var second_target := tree.root.get_child(2)
+	var second_target_rect := tree.get_item_area_rect(second_target, 0)
+	var below_second_target := second_target_rect.position + Vector2(4.0, second_target_rect.size.y - 1.0)
+	var second_drag_data := {"from": second_item}
+	var can_drop_again := tree._can_drop_data(below_second_target, second_drag_data)
+	_expect(can_drop_again, "A second reorder should be accepted after drag end.")
+	_expect(
+		tree.drop_mode_flags == Tree.DROP_MODE_INBETWEEN,
+		"Accepting another drag should re-enable the in-between drop mode."
+	)
+	tree._drop_data(below_second_target, second_drag_data)
+	var actual_order : Array = tree.get_all_items().map(
+		func(action : AutoPlaySuiteActionResource) -> StringName: return action.action_id
+	)
+	_expect(actual_order == [&"A", &"C", &"B"], "The second reorder should update the action order.")
 	tree.queue_free()
 
 

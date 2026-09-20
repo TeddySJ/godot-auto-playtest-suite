@@ -91,8 +91,10 @@ func _get_drag_data(at_position: Vector2):
 	set_drag_preview(p)
 	return {"from": it}
 
-func _can_drop_data(at_position: Vector2, data):
-	return typeof(data) == TYPE_DICTIONARY and data.has("from") and data["from"] is TreeItem
+func _can_drop_data(_at_position: Vector2, data) -> bool:
+	var can_drop : bool = typeof(data) == TYPE_DICTIONARY and data.has("from") and data["from"] is TreeItem
+	drop_mode_flags = DropModeFlags.DROP_MODE_INBETWEEN if can_drop else DropModeFlags.DROP_MODE_DISABLED
+	return can_drop
 
 func _drop_data(at_position: Vector2, data):
 	var from: TreeItem = data["from"]
