@@ -39,6 +39,7 @@ func _ready() -> void:
 	filter_line_edit.position = Vector2(30, y_offset + 0)* ed_scale
 	filter_line_edit.custom_minimum_size.x = 300 * ed_scale
 	filter_line_edit.text_changed.connect(_filter_line_edit_changed)
+	filter_line_edit.gui_input.connect(_filter_line_edit_gui_input)
 	main_panel.add_child(filter_line_edit)
 	
 	drop_down = OptionButton.new()
@@ -171,6 +172,24 @@ func _filter_line_edit_changed(text : String):
 	_filter_drop_down(text)
 	#TODO: This should really show the drop down list, but I think it's not possible to show it while retaining focus: 
 	#      I need to rewrite the dropdown as something else! Probably with an ItemList that hides on pick
+
+func _filter_line_edit_gui_input(event : InputEvent) -> void:
+	if !(event is InputEventKey) || !filter_line_edit.editable || underlying_action == null:
+		return
+	var key_event := event as InputEventKey
+	if !key_event.pressed || !key_event.ctrl_pressed || (key_event.keycode != KEY_UP && key_event.keycode != KEY_DOWN):
+		return
+	filter_line_edit.accept_event()
+	var item_count := drop_down.item_count
+	if item_count == 0:
+		return
+	var selected_index := drop_down.selected
+	var direction := -1 if key_event.keycode == KEY_UP else 1
+	var next_index := wrapi(selected_index + direction, 0, item_count)
+	if next_index == selected_index:
+		return
+	drop_down.select(next_index)
+	_action_id_changed(next_index)
 
 func _action_id_changed(index : int):
 	var selected_action_id := StringName(drop_down.get_item_text(index))

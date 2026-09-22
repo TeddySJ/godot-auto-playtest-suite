@@ -15,6 +15,7 @@ func _run_regressions() -> void:
 	_test_filter_selects_first_match_when_current_action_does_not_match()
 	_test_filter_keeps_current_action_when_it_matches()
 	_test_filter_keeps_current_action_when_nothing_matches()
+	_test_filter_keyboard_navigation_wraps_visible_actions()
 	_test_extra_vars_are_editable()
 	_test_extra_vars_preserve_empty_positions()
 	_test_selecting_an_action_does_not_modify_it()
@@ -210,6 +211,52 @@ func _test_filter_keeps_current_action_when_nothing_matches() -> void:
 	view._filter_drop_down("no matches")
 	_expect(action.action_id == &"Wait", "Filtering should keep the current action when nothing matches.")
 	_expect(view.drop_down.get_selected_id() == view.backing_dictionary[&"Wait"], "The current action should remain selected when nothing matches.")
+	view.queue_free()
+
+
+func _test_filter_keyboard_navigation_wraps_visible_actions() -> void:
+	var view := AutoPlaySuiteUiActionView.new()
+	root.add_child(view)
+	view._fill_drop_down([&"Wait", &"LMB Press", &"LMB Release"])
+	var action : AutoPlaySuiteActionResource = AutoPlaySuiteActionResource.Create(&"LMB Press")
+	view._set_action(action)
+	view.filter_line_edit.text = "lmb"
+	view._filter_drop_down(view.filter_line_edit.text)
+	view.filter_line_edit.grab_focus()
+	_expect(view.filter_line_edit.has_focus(), "The filter should receive keyboard focus for navigation.")
+
+	var down := InputEventKey.new()
+	down.keycode = KEY_DOWN
+	down.ctrl_pressed = true
+	down.pressed = true
+	root.push_input(down)
+	_expect(action.action_id == &"LMB Release", "Ctrl+Down should select the next visible action.")
+	root.push_input(down)
+	_expect(action.action_id == &"LMB Press", "Ctrl+Down should wrap from the bottom to the top.")
+
+	var up := InputEventKey.new()
+	up.keycode = KEY_UP
+	up.ctrl_pressed = true
+	up.pressed = true
+	root.push_input(up)
+	_expect(action.action_id == &"LMB Release", "Ctrl+Up should wrap from the top to the bottom.")
+	root.push_input(up)
+	_expect(action.action_id == &"LMB Press", "Ctrl+Up should select the previous visible action.")
+	_expect(view.drop_down.get_selected_id() == view.backing_dictionary[action.action_id], "The dropdown should track keyboard selection.")
+	_expect(view.filter_line_edit.has_focus(), "Keyboard navigation should leave focus in the filter.")
+
+	down.ctrl_pressed = false
+	root.push_input(down)
+	_expect(action.action_id == &"LMB Press", "Down without Ctrl should not change the action.")
+	down.ctrl_pressed = true
+	down.pressed = false
+	root.push_input(down)
+	_expect(action.action_id == &"LMB Press", "Releasing Ctrl+Down should not change the action.")
+
+	view._filter_drop_down("no matches")
+	action.float_var = 7.0
+	root.push_input(up)
+	_expect(action.action_id == &"LMB Press" && action.float_var == 7.0, "Stepping a one-item dropdown should preserve the action and its arguments.")
 	view.queue_free()
 
 
