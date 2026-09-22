@@ -14,12 +14,13 @@ signal signal_on_item_added_and_bound
 signal signal_on_item_removed
 signal signal_on_item_order_changed
 
-func add_and_bind_item(text : String, value, at_index : int = -1):
+func add_and_bind_item(text : String, value, at_index : int = -1) -> TreeItem:
 	var new_item = create_item(root, at_index)
 	
 	new_item.set_text(0, text)
 	backing_dictionary[new_item] = value
 	signal_on_item_added_and_bound.emit()
+	return new_item
 
 func remove_item(to_remove : TreeItem):
 	backing_dictionary.erase(to_remove)

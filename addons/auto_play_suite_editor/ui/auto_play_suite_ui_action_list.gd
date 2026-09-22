@@ -51,8 +51,22 @@ func empty_list():
 func _emit_list_changed():
 	signal_on_list_changed.emit()
 
+func add_and_bind_item(text : String, value, at_index : int = -1) -> TreeItem:
+	var item : TreeItem = super.add_and_bind_item(text, value, at_index)
+	_update_item_background(item)
+	return item
+
 func update_display_text_of_selected_index():
 	currently_selected.set_text(0, backing_dictionary[currently_selected].action_id)
+	_update_item_background(currently_selected)
+
+func _update_item_background(item : TreeItem) -> void:
+	var action : AutoPlaySuiteActionResource = backing_dictionary[item]
+	var definition := AutoPlaySuiteActionLibrary.get_action(action.action_id)
+	if definition != null && definition.list_background_color != Color.TRANSPARENT:
+		item.set_custom_bg_color(0, definition.list_background_color)
+	else:
+		item.clear_custom_bg_color(0)
 
 func _update_display_text_at_index(index : int):
 	pass
