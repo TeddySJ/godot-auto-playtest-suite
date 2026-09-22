@@ -7,10 +7,10 @@ var instruction_dictionary : Dictionary[StringName, AutoPlaySuiteInstructionDefi
 	&"[Game] Kill < X, Love >= X" : AutoPlaySuiteInstructionDefinition.Create(_kill_or_love, "Gamble!"),
 	&"[Game] Play Forever, K<X, L>X" : AutoPlaySuiteInstructionDefinition.Create(_start_kill_or_love_forever, "Gamble forever", _process_kill_or_love_forever),
 	&"[Game] Exit On All Dead Or 10 Alive" : AutoPlaySuiteInstructionDefinition.Create(_enable_exit_on_condition, "Sets the game to exit if ever at 0 or 10 people"),
-	&"[Game] Set Time Scale" : AutoPlaySuiteInstructionDefinition.Create(_set_time_scale, "Sets the engine's time scale", _empty, Color.SEA_GREEN),
+	&"[Game] Set Time Scale" : AutoPlaySuiteInstructionDefinition.Create(_set_time_scale, "Sets the engine's time scale", _empty_process, Color.SEA_GREEN),
 }
 
-func _empty():
+func _empty_process(delta : float, action_resource : AutoPlaySuiteActionResource):
 	pass
 
 func hook_into_suite():
