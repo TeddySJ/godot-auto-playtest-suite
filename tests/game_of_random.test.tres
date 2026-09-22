@@ -77,3 +77,4 @@ script = ExtResource("2_f2oip")
 test_name = "GameOfRandom"
 test_uid = "uid://gb1ho367v6mt"
 actions = Array[ExtResource("1_qmao4")]([SubResource("Resource_qmao4"), SubResource("Resource_f2oip"), SubResource("Resource_tbs1s"), SubResource("Resource_85ksd"), SubResource("Resource_tsupo"), SubResource("Resource_7of2g"), SubResource("Resource_1o0do"), SubResource("Resource_6vbdr"), SubResource("Resource_0qo5x"), SubResource("Resource_p6d6j"), SubResource("Resource_lto4d"), SubResource("Resource_3l0bd"), SubResource("Resource_n5bp6"), SubResource("Resource_b4ky6")])
+stop_series_on_error = true

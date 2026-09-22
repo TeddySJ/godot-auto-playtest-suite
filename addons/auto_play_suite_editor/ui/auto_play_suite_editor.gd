@@ -478,7 +478,7 @@ func _should_cancel_series_after_test(test_resource : AutoPlaySuiteTestResource)
 	return (
 		running_test_series
 		&& test_resource.stop_series_on_error
-		&& logs.has_failed_evaluations(test_resource.get_identity_key())
+		&& !_test_passed(test_resource)
 	)
 
 func _set_current_test_file_path_environment(path : String):

@@ -14,6 +14,16 @@ class StartupProbe extends AutoPlaySuite:
 	func _stop_game() -> void:
 		simulated_game_running = false
 
+class QueueProbe extends AutoPlaySuite:
+	var launched_tests : Array[AutoPlaySuiteTestResource] = []
+	var ended : bool = false
+
+	func _run_single_test(test_resource : AutoPlaySuiteTestResource, _call_on_finished : Callable):
+		launched_tests.append(test_resource)
+
+	func _end_testing():
+		ended = true
+
 func _initialize() -> void:
 	_run_validation.call_deferred()
 
@@ -172,6 +182,34 @@ func _run_validation() -> void:
 		next_test.get_identity_key()
 	)
 	_assert_true(editor._should_cancel_series_after_test(next_test), "A failed evaluation should cancel a test whose stop-series option is enabled.")
+
+	var window_closed_test := _make_test("Window Closed", "uid://series-validation-window-closed")
+	window_closed_test.premature_end_is_error = true
+	window_closed_test.stop_series_on_error = true
+	editor.test_has_exited_properly = false
+	editor.received_exit_message = false
+	editor.current_run_failure_message = ""
+	editor._on_test_ended(window_closed_test)
+	_assert_true(!editor.accumulated_test_results[window_closed_test.get_identity_key()], "Closing the game window should fail a test with Unexpected End Is Error enabled.")
+	_assert_true(editor._should_cancel_series_after_test(window_closed_test), "An unexpected game exit should stop the series when Stop Series On Error is enabled.")
+	window_closed_test.stop_series_on_error = false
+	_assert_true(!editor._should_cancel_series_after_test(window_closed_test), "An unexpected exit should not stop the series when the stop option is disabled.")
+	window_closed_test.stop_series_on_error = true
+	window_closed_test.premature_end_is_error = false
+	_assert_true(!editor._should_cancel_series_after_test(window_closed_test), "An allowed early exit should not stop the series.")
+	window_closed_test.premature_end_is_error = true
+	editor.test_has_exited_properly = true
+	_assert_true(!editor._should_cancel_series_after_test(window_closed_test), "A properly exited passing run should not stop the series.")
+	editor.received_exit_message = true
+	editor.current_test_exit_code = 1
+	_assert_true(editor._should_cancel_series_after_test(window_closed_test), "A nonzero test exit code should stop the series.")
+
+	var queue_probe := QueueProbe.new()
+	queue_probe.tests_to_run.append(next_test)
+	queue_probe.series_cancelled = true
+	queue_probe._run_next_test()
+	_assert_true(queue_probe.ended && queue_probe.launched_tests.is_empty(), "A cancelled series must not launch its next queued test.")
+	queue_probe.free()
 
 	view.queue_free()
 	editor.free()
