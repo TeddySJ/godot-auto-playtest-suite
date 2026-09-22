@@ -156,15 +156,16 @@ func _filter_drop_down(filter_text : String):
 		if has_all:
 			matched_names.append(str)
 	drop_down.clear()
-	var added_current: bool = false
 	for entry in matched_names:
 		drop_down.add_item(entry, backing_dictionary[entry])
-		if entry == current_drop_down_option:
-			added_current = true
-	if !added_current:
+	if matched_names.has(current_drop_down_option):
+		_select_in_drop_down(current_drop_down_option)
+	elif !matched_names.is_empty():
+		drop_down.select(0)
+		_action_id_changed(0)
+	else:
 		drop_down.add_item(current_drop_down_option, backing_dictionary[current_drop_down_option])
-	#drop_down.text = current_drop_down_option
-	_select_in_drop_down(current_drop_down_option)
+		_select_in_drop_down(current_drop_down_option)
 
 func _filter_line_edit_changed(text : String):
 	_filter_drop_down(text)

@@ -12,6 +12,9 @@ func _run_regressions() -> void:
 	await _test_drop_mode_rearms_after_completed_drag()
 	_test_new_test_updates_behavior_checkboxes()
 	_test_changing_action_id_clears_generic_arguments()
+	_test_filter_selects_first_match_when_current_action_does_not_match()
+	_test_filter_keeps_current_action_when_it_matches()
+	_test_filter_keeps_current_action_when_nothing_matches()
 	_test_extra_vars_are_editable()
 	_test_extra_vars_preserve_empty_positions()
 	_test_selecting_an_action_does_not_modify_it()
@@ -170,6 +173,43 @@ func _test_changing_action_id_clears_generic_arguments() -> void:
 	_expect(action.float_var == 0.0, "Changing action ID should reset the float argument.")
 	_expect(action.string_var.is_empty(), "Changing action ID should reset the string argument in the resource.")
 	_expect(action.extra_vars.is_empty(), "Changing action ID should reset the extra string arguments.")
+	view.queue_free()
+
+
+func _test_filter_selects_first_match_when_current_action_does_not_match() -> void:
+	var view := AutoPlaySuiteUiActionView.new()
+	root.add_child(view)
+	view._fill_drop_down([&"Wait", &"LMB Press", &"LMB Release"])
+	var action : AutoPlaySuiteActionResource = AutoPlaySuiteActionResource.Create(&"Wait")
+	view._set_action(action)
+	view._filter_drop_down("lmb")
+	_expect(view.drop_down.item_count == 2, "Filtering should only display matching actions when matches exist.")
+	_expect(action.action_id == &"LMB Press", "Filtering should change a nonmatching action to the first match.")
+	_expect(view.drop_down.get_selected_id() == view.backing_dictionary[&"LMB Press"], "The first match should be selected in the dropdown.")
+	view.queue_free()
+
+
+func _test_filter_keeps_current_action_when_it_matches() -> void:
+	var view := AutoPlaySuiteUiActionView.new()
+	root.add_child(view)
+	view._fill_drop_down([&"Wait", &"LMB Press", &"LMB Release"])
+	var action : AutoPlaySuiteActionResource = AutoPlaySuiteActionResource.Create(&"LMB Release")
+	view._set_action(action)
+	view._filter_drop_down("lmb")
+	_expect(action.action_id == &"LMB Release", "Filtering should keep the current action when it matches.")
+	_expect(view.drop_down.get_selected_id() == view.backing_dictionary[&"LMB Release"], "A matching current action should remain selected.")
+	view.queue_free()
+
+
+func _test_filter_keeps_current_action_when_nothing_matches() -> void:
+	var view := AutoPlaySuiteUiActionView.new()
+	root.add_child(view)
+	view._fill_drop_down([&"Wait", &"LMB Press", &"LMB Release"])
+	var action : AutoPlaySuiteActionResource = AutoPlaySuiteActionResource.Create(&"Wait")
+	view._set_action(action)
+	view._filter_drop_down("no matches")
+	_expect(action.action_id == &"Wait", "Filtering should keep the current action when nothing matches.")
+	_expect(view.drop_down.get_selected_id() == view.backing_dictionary[&"Wait"], "The current action should remain selected when nothing matches.")
 	view.queue_free()
 
 
