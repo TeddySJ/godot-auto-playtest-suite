@@ -23,6 +23,7 @@ var new_test_button : Button
 
 var run_current_test_button : Button
 var run_all_tests_button : Button
+var abort_testing_button : Button
 
 var underlying_dictionary : Dictionary[Button, AutoPlaySuiteTestResource]
 
@@ -38,6 +39,7 @@ signal signal_on_test_changed(new_test : AutoPlaySuiteTestResource)
 signal signal_on_new_series
 signal signal_on_run_current_test_pressed
 signal signal_on_run_all_tests_pressed
+signal signal_on_abort_testing_pressed
 
 signal signal_on_new_test_button_pressed
 signal signal_on_load_test_button_pressed
@@ -92,6 +94,13 @@ func _ready() -> void:
 	run_all_tests_button.position = run_test_button_start_pos + Vector2(170, 10) * ed_scale
 	run_all_tests_button.pressed.connect(_on_run_all_tests_button_pressed)
 	add_child(run_all_tests_button)
+
+	abort_testing_button = Button.new()
+	abort_testing_button.text = "Abort Testing"
+	abort_testing_button.position = run_all_tests_button.position + Vector2(140, 0) * ed_scale
+	abort_testing_button.disabled = true
+	abort_testing_button.pressed.connect(_on_abort_testing_button_pressed)
+	add_child(abort_testing_button)
 	
 	var button_start_pos : Vector2 = test_series_name_input.position + Vector2(test_series_name_input.custom_minimum_size.x, 0)
 	
@@ -464,6 +473,12 @@ func _on_run_all_tests_button_pressed():
 	
 	signal_on_run_all_tests_pressed.emit()
 
+func _on_abort_testing_button_pressed() -> void:
+	if !testing_in_progress || abort_testing_button.disabled:
+		return
+	abort_testing_button.disabled = true
+	signal_on_abort_testing_pressed.emit()
+
 func _save_all_tests_in_series() -> bool:
 	var origin_index : int = current_selected_index
 	var editor := AutoPlaySuite._get_plugin_singleton()
@@ -593,6 +608,7 @@ func set_testing_in_progress(in_progress : bool) -> void:
 	new_test_button.disabled = in_progress
 	run_current_test_button.disabled = in_progress
 	run_all_tests_button.disabled = in_progress
+	abort_testing_button.disabled = !in_progress
 	for index in test_button_list.size():
 		test_button_list[index].disabled = in_progress || index == current_selected_index
 	_update_test_order_buttons()

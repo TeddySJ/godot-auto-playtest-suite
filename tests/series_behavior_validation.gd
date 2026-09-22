@@ -17,12 +17,16 @@ class StartupProbe extends AutoPlaySuite:
 class QueueProbe extends AutoPlaySuite:
 	var launched_tests : Array[AutoPlaySuiteTestResource] = []
 	var ended : bool = false
+	var stop_game_calls : int = 0
 
 	func _run_single_test(test_resource : AutoPlaySuiteTestResource, _call_on_finished : Callable):
 		launched_tests.append(test_resource)
 
 	func _end_testing():
 		ended = true
+
+	func _stop_game() -> void:
+		stop_game_calls += 1
 
 func _initialize() -> void:
 	_run_validation.call_deferred()
@@ -41,6 +45,8 @@ func _run_validation() -> void:
 	var view := AutoPlaySuiteUiTestSeriesView.new()
 	root.add_child(view)
 	await process_frame
+	_assert_true(view.abort_testing_button.disabled, "Abort Testing should be disabled before a test starts.")
+	_assert_true(view.abort_testing_button.position.y == view.run_all_tests_button.position.y && view.abort_testing_button.position.x > view.run_all_tests_button.position.x, "Abort Testing should appear beside Run All Tests.")
 
 	var first := _make_test("Duplicate Name", "uid://series-validation-first")
 	var second := _make_test("Duplicate Name", "uid://series-validation-second")
@@ -98,8 +104,10 @@ func _run_validation() -> void:
 	view.set_testing_in_progress(true)
 	_assert_true(view.testing_in_progress, "The series view should enter its testing state.")
 	_assert_true(view.run_all_tests_button.disabled && view.remove_test_button.disabled, "Run and mutation controls should be disabled during testing.")
+	_assert_true(!view.abort_testing_button.disabled, "Abort Testing should be enabled while a test is running.")
 	view.set_testing_in_progress(false)
 	_assert_true(!view.run_all_tests_button.disabled && !view.remove_test_button.disabled, "Series controls should be restored after testing.")
+	_assert_true(view.abort_testing_button.disabled, "Abort Testing should be disabled after testing ends.")
 
 	var editor := AutoPlaySuite.new()
 	editor.logs = AutoPlaySuiteLogStore.new()
@@ -210,6 +218,27 @@ func _run_validation() -> void:
 	queue_probe._run_next_test()
 	_assert_true(queue_probe.ended && queue_probe.launched_tests.is_empty(), "A cancelled series must not launch its next queued test.")
 	queue_probe.free()
+
+	var abort_probe := QueueProbe.new()
+	abort_probe.logs = AutoPlaySuiteLogStore.new()
+	abort_probe.currently_running_test = first
+	abort_probe.testing_in_progress = true
+	abort_probe.running_test_series = true
+	abort_probe.tests_to_run.append(second)
+	view.signal_on_abort_testing_pressed.connect(abort_probe._abort_testing)
+	view.set_testing_in_progress(true)
+	view.abort_testing_button.pressed.emit()
+	_assert_true(abort_probe.abort_requested && abort_probe.series_cancelled, "Abort Testing should cancel the active series.")
+	_assert_true(abort_probe.stop_game_calls == 1, "Abort Testing should stop the current game and debugger.")
+	_assert_true(abort_probe.tests_to_run.is_empty(), "Abort Testing should clear every queued test.")
+	_assert_true(!abort_probe._test_passed(first), "The aborted test should not be reported as passing.")
+	_assert_true(view.abort_testing_button.disabled, "Abort Testing should disable itself after a press.")
+	view.abort_testing_button.pressed.emit()
+	_assert_true(abort_probe.stop_game_calls == 1, "Repeated abort presses should not stop the game again.")
+	_assert_true(!await abort_probe._wait_until_run_starts(1000), "Aborting during startup should end the startup handshake immediately.")
+	abort_probe._run_next_test()
+	_assert_true(abort_probe.ended && abort_probe.launched_tests.is_empty(), "Abort Testing must not launch a later test.")
+	abort_probe.free()
 
 	view.queue_free()
 	editor.free()

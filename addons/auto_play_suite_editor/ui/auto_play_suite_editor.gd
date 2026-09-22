@@ -61,6 +61,7 @@ var currently_running_test : AutoPlaySuiteTestResource = null
 var testing_in_progress : bool = false
 var running_test_series : bool = false
 var series_cancelled : bool = false
+var abort_requested : bool = false
 var accumulated_test_results : Dictionary[String, bool] = {}
 var debugger_session_test_keys : Dictionary[int, String] = {}
 var debugger_session_run_ids : Dictionary[int, String] = {}
@@ -170,6 +171,7 @@ func setup_ui() -> void:
 	
 	test_series_view.signal_on_run_current_test_pressed.connect(_run_current_test)
 	test_series_view.signal_on_run_all_tests_pressed.connect(_run_all_tests)
+	test_series_view.signal_on_abort_testing_pressed.connect(_abort_testing)
 	test_series_view.signal_on_new_test_button_pressed.connect(_new_test)
 	test_series_view.signal_on_load_test_button_pressed.connect(_load_button_pressed)
 	
@@ -370,6 +372,7 @@ func _prepare_for_testing(is_series : bool):
 	testing_in_progress = true
 	running_test_series = is_series
 	series_cancelled = false
+	abort_requested = false
 	accumulated_test_results.clear()
 	if !_is_game_running():
 		debugger_session_test_keys.clear()
@@ -395,6 +398,15 @@ func _end_testing():
 	test_series_view.set_testing_in_progress(false)
 	current_test_view.set_testing_in_progress(false)
 	action_view.set_testing_in_progress(false)
+
+func _abort_testing() -> void:
+	if !testing_in_progress || abort_requested:
+		return
+	abort_requested = true
+	series_cancelled = true
+	tests_to_run.clear()
+	_record_current_run_failure("Testing aborted by user.")
+	_stop_game()
 
 func _on_test_ended(test : AutoPlaySuiteTestResource):
 	var test_key := test.get_identity_key()
@@ -457,14 +469,14 @@ func _run_single_test(test_resource : AutoPlaySuiteTestResource, call_on_finishe
 	var started_successfully := false
 	if start_requested:
 		started_successfully = await _wait_until_run_starts()
-	if start_requested && !started_successfully:
+	if start_requested && !started_successfully && !abort_requested:
 		if _is_game_running():
 			_record_current_run_failure("The game started, but the Auto Play Suite runner did not report in within %.1f seconds." % [float(RUN_START_TIMEOUT_MSEC) / 1000.0])
 			_stop_game()
 		else:
 			_record_current_run_failure("The game exited before the Auto Play Suite runner reported that it had started.")
 	await _wait_until_run_finishes_or_game_exits()
-	if current_run_will_quit:
+	if current_run_will_quit || abort_requested:
 		await _wait_until_game_exits()
 	if !received_exit_message:
 		await _wait_for_exit_message()
@@ -536,6 +548,8 @@ func _wait_until_run_starts(timeout_msec : int = RUN_START_TIMEOUT_MSEC) -> bool
 	var deadline := Time.get_ticks_msec() + timeout_msec
 	var observed_running_game := false
 	while Time.get_ticks_msec() < deadline:
+		if abort_requested:
+			return false
 		if run_started:
 			return true
 		if _is_game_running():
@@ -543,7 +557,7 @@ func _wait_until_run_starts(timeout_msec : int = RUN_START_TIMEOUT_MSEC) -> bool
 		elif observed_running_game:
 			return false
 		await get_tree().process_frame
-	return run_started
+	return run_started && !abort_requested
 
 func _is_game_running() -> bool:
 	return EditorInterface.is_playing_scene()
